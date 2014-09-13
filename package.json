@@ -1,0 +1,28 @@
+{
+  "name": "elasticsearch-orm",
+  "version": "0.0.0",
+  "description": "An ORM, in the style of Mongoose, for Elasticsearch.",
+  "main": "elasticsearch-orm.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jeresig/elasticsearch-orm.git"
+  },
+  "keywords": [
+    "elasticsearch",
+    "orm",
+    "database",
+    "search"
+  ],
+  "author": "John Resig <jeresig@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jeresig/elasticsearch-orm/issues"
+  },
+  "homepage": "https://github.com/jeresig/elasticsearch-orm",
+  "dependencies": {
+    "elasticsearch": "^2.4.2"
+  }
+}
