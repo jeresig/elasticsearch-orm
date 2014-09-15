@@ -23,6 +23,8 @@
   },
   "homepage": "https://github.com/jeresig/elasticsearch-orm",
   "dependencies": {
-    "elasticsearch": "^2.4.2"
+    "elasticsearch": "^2.4.2",
+    "lodash": "^2.4.1",
+    "async": "^0.9.0"
   }
 }
