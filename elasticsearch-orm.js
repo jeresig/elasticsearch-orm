@@ -9,6 +9,9 @@ var es = require("elasticsearch");
 // multiple files using .model("name").
 var models = {};
 
+// Store the client connection as well so that it's "shared"
+var client;
+
 var Schema = function(options) {
     this.methods = {};
     this.statics = {};
@@ -31,32 +34,76 @@ Schema.prototype = {
     }
 };
 
-var Model = function(name, options, client) {
-    this.name = name;
-    this.options = options;
-    this.execQueue = [];
-    this.client = client;
-};
-
-Model.prototype = {
+var ModelPrototype = {
     populate: function(options, callback) {
         return callback ? this.exec(callback) : this;
     },
 
     save: function(callback) {
-
+        // If it doesn't exist, use client.index()
     },
 
     update: function(data, callback) {
-
+        // Use client.update()
     },
 
     remove: function(callback) {
-
+        // Use client.delete
     },
 
     exec: function(callback) {
         return this;
+    }
+};
+
+var ModelStatics = {
+    // NOTE: Maybe we don't need this? Move to just find?
+    search: function(query, options, callback) {
+        return callback ? this.exec(callback) : this;
+    },
+
+    find: function(query, callback) {
+        var q = new Query(query, this);
+        return callback ? q.exec(callback) : q;
+    },
+
+    findOne: function(query, callback) {
+        var q = new Query(query, this);
+        q.limit(1);
+        return callback ? q.exec(callback) : q;
+    },
+
+    findById: function(id, callback) {
+        var q = new Query({id: id}, this);
+        return callback ? q.exec(callback) : q;
+    },
+
+    create: function(data, callback) {
+        var model = new this(data);
+        model.save(callback);
+    },
+
+    update: function(query, data, options, callback) {
+        // Options: upsert, multi
+        var processResults = function(err, results) {
+            if (results.length === 0) {
+                if (options.upsert) {
+                    this.create(data, callback);
+                } else {
+                    callback(null, results);
+                }
+            } else {
+                results.update(data, callback);
+            }
+        }.bind(this);
+
+        return options.multi ?
+            this.find(query, processResults) :
+            this.findOne(query, processResults);
+    },
+
+    count: function(query, callback) {
+
     }
 };
 
@@ -127,61 +174,18 @@ Results.prototype = {
     }
 };
 
-_.extend(Model, {
-    // NOTE: Maybe we don't need this? Move to just find?
-    search: function(query, options, callback) {
-        return callback ? this.exec(callback) : this;
-    },
-
-    find: function(query, callback) {
-        var q = new Query(query);
-        return callback ? q.exec(callback) : q;
-    },
-
-    findOne: function(query, callback) {
-        var q = new Query(query);
-        q.limit(1);
-        return callback ? q.exec(callback) : q;
-    },
-
-    findById: function(id, callback) {
-        var q = new Query({id: id});
-        return callback ? q.exec(callback) : q;
-    },
-
-    create: function(data, callback) {
-        var model = new this(data);
-        model.save(callback);
-    },
-
-    update: function(query, data, options, callback) {
-        // Options: upsert, multi
-        var processResults = function(err, results) {
-            if (results.length === 0) {
-                if (options.upsert) {
-                    this.create(data, callback);
-                } else {
-                    callback(null, results);
-                }
-            } else {
-                results.update(data, callback);
-            }
-        }.bind(this);
-
-        return options.multi ?
-            this.find(query, processResults) :
-            this.findOne(query, processResults);
-    },
-
-    count: function(query, callback) {
-
-    }
-});
-
-var Query = function(query) {
+var Query = function(query, model) {
     // Support: find by null
-    this.query = query;
-    this.options = {};
+    this.query = query || {};
+    this.model = model;
+    this.options = {
+        limit: 10,
+        skip: 0,
+        fields: true,
+        lean: false,
+        populate: "",
+        sort: {}
+    };
 };
 
 Query.prototype = {
@@ -216,6 +220,50 @@ Query.prototype = {
     },
 
     exec: function(callback) {
+        var query = {
+            from: this.options.skip,
+            size: this.options.limit,
+            fields: this.options.fields.split(/\s+/),
+            body: {
+                query: {
+                   match: this.query
+                },
+                sort: {}
+            }
+        };
+
+        Object.keys(this.options.sort).forEach(function(key) {
+            var val = this.options.sort[key];
+            var dir = val === "desc" || val === "descending" || val === -1 ?
+                "desc" : "asc";
+            query.body.sort[key] = dir;
+        }.bind(this));
+
+        // TODO: Use .get() when only _id is being used
+        // and use +realtime: true
+
+        client.search(query, function(err, response) {
+            if (err) {
+                return callback(err);
+            }
+
+            var results = response.body;
+
+            if (!this.options.lean || this.options.populate) {
+                results = results.map(function(item) {
+                    return new model(item);
+                }.bind(this));
+            }
+
+            if (this.options.populate) {
+                async.eachLimit(results, 4, function(item, callback) {
+                    item.populate(this.options.populate, callback);
+                }.bind(this), callback);
+            } else {
+                callback(err, results);
+            }
+        }.bind(this));
+
         return this;
     },
 
@@ -230,7 +278,7 @@ module.exports = {
     connect: function(esURL) {
         var urlParts = url.parse(esURL);
 
-        this.client = new es.Client({
+        client = new es.Client({
             host: urlParts.host,
             apiVersion: "1.3"
         });
@@ -246,8 +294,20 @@ module.exports = {
 
     model: function(name, schema) {
         if (schema) {
-            // TODO: Turn this into a proper model
-            models[name] = new Model(name, schema, this.client);
+            var Model = function(data) {
+                this._type = name;
+                // TODO: Bring in properties, etc.
+                _.extend(this, data);
+                // TODO: Set virtuals
+            };
+
+            Model.displayName = name;
+
+            Model.prototype = _.extend({}, ModelPrototype);
+
+            _.extend(Model, ModelStatics);
+
+            models[name] = Model;
         }
 
         if (!(name in models)) {
