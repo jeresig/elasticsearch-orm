@@ -107,8 +107,13 @@ var ModelStatics = {
     }
 };
 
-var Results = function(results) {
-    this.results = results;
+var Results = function(results, model) {
+    results.forEach(function(item, i) {
+        this[i] = new model(item);
+    }.bind(this));
+
+    this.length = results.length;
+
     this.execQueue = [];
 };
 
@@ -119,7 +124,7 @@ Results.prototype = {
             return this;
         }
 
-        async.eachLimit(this.results, 4, function(item, callback) {
+        async.eachLimit(this, 4, function(item, callback) {
             item.populate(options, callback);
         }, callback);
 
@@ -132,7 +137,7 @@ Results.prototype = {
             return this;
         }
 
-        async.eachLimit(this.results, 4, function(item, callback) {
+        async.eachLimit(this, 4, function(item, callback) {
             item.save(callback);
         }, callback);
 
@@ -145,7 +150,7 @@ Results.prototype = {
             return this;
         }
 
-        async.eachLimit(this.results, 4, function(item, callback) {
+        async.eachLimit(this, 4, function(item, callback) {
             item.update(data, callback);
         }, callback);
 
@@ -158,7 +163,7 @@ Results.prototype = {
             return this;
         }
 
-        async.eachLimit(this.results, 4, function(item, callback) {
+        async.eachLimit(this, 4, function(item, callback) {
             item.remove(callback);
         }, callback);
 
@@ -247,12 +252,10 @@ Query.prototype = {
                 return callback(err);
             }
 
-            var results = response.body;
+            var results = response.hits.hits;
 
             if (!this.options.lean || this.options.populate) {
-                results = results.map(function(item) {
-                    return new model(item);
-                }.bind(this));
+                results = new Results(results, model);
             }
 
             if (this.options.populate) {
