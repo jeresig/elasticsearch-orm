@@ -225,7 +225,35 @@ Query.prototype = {
     },
 
     exec: function(callback) {
+        if (this.query.id) {
+            client.get({
+                // TODO: Figure out index and type
+                index: "",
+                type: "",
+                id: this.query.id
+            }, function(err, result) {
+                if (err) {
+                    return callback(err);
+                }
+
+                if (!this.options.lean || this.options.populate) {
+                    result = new model(result);
+                }
+
+                if (this.options.populate) {
+                    result.populate(this.options.populate, callback);
+                } else {
+                    callback(err, result);
+                }
+            });
+
+            return;
+        }
+
         var query = {
+            // TODO: Figure out index and type
+            index: "",
+            type: "",
             from: this.options.skip,
             size: this.options.limit,
             fields: this.options.fields.split(/\s+/),
