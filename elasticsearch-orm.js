@@ -227,9 +227,8 @@ Query.prototype = {
     exec: function(callback) {
         if (this.query.id) {
             client.get({
-                // TODO: Figure out index and type
-                index: "",
-                type: "",
+                index: model.index,
+                type: model.type,
                 id: this.query.id
             }, function(err, result) {
                 if (err) {
@@ -251,9 +250,8 @@ Query.prototype = {
         }
 
         var query = {
-            // TODO: Figure out index and type
-            index: "",
-            type: "",
+            index: model.index,
+            type: model.type,
             from: this.options.skip,
             size: this.options.limit,
             fields: this.options.fields.split(/\s+/),
@@ -272,7 +270,7 @@ Query.prototype = {
             query.body.sort[key] = dir;
         }.bind(this));
 
-        // TODO: Use .get() when only _id is being used
+        // TODO: Use .get() when only id is being used
         // and use +realtime: true
 
         client.search(query, function(err, response) {
@@ -326,13 +324,15 @@ module.exports = {
     model: function(name, schema) {
         if (schema) {
             var Model = function(data) {
-                this._type = name;
+                this.type = name;
                 // TODO: Bring in properties, etc.
                 _.extend(this, data);
                 // TODO: Set virtuals
             };
 
             Model.displayName = name;
+            Model.index = name;
+            Model.type = name;
 
             Model.prototype = _.extend({}, ModelPrototype);
 
