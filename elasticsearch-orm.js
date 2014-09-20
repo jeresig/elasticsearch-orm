@@ -40,7 +40,18 @@ var ModelPrototype = {
     },
 
     save: function(callback) {
-        // If it doesn't exist, use client.index()
+        client.index({
+            index: this.index,
+            type: this.type,
+            id: this.id,
+            //version: this.version,
+            body: {
+                
+            }
+        }, function(err, response) {
+            // Maybe re-generate to pull in missing id?
+            callback(err, this);
+        }.bind(this));
     },
 
     update: function(data, callback) {
