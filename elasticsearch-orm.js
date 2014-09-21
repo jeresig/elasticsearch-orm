@@ -2,6 +2,7 @@ var url = require("url");
 var events = require("events");
 
 var _ = require("lodash");
+var async = require("async");
 var es = require("elasticsearch");
 
 // Store the models outside of the module, this mimics Mongoose's
@@ -35,8 +36,61 @@ Schema.prototype = {
 };
 
 var ModelPrototype = {
-    populate: function(options, callback) {
-        return callback ? this.exec(callback) : this;
+    _populate: function(curObj, parts, callback) {
+        var remaining = parts;
+
+        async.eachLimit(parts, 1, function(prop, callback) {
+            remaining = remaining.splice(1);
+            curObj = curObj[prop];
+
+            if (curObj[prop] instanceof Array) {
+                if (typeof curObj[prop][0] === "string") {
+                    // Find many by ID
+                    this.model.findById(curObj[prop], function(err, results) {
+                        for (var i = 0; i < results.length; i++) {
+                            curObj[prop][i] = results[i];
+                        }
+
+                        if (remaining.length === 0) {
+                            callback();
+                        } else {
+                            this._populate(curObj[prop], remaining, callback);
+                        }
+                    }.bind(this));
+
+                } else {
+                    async.eachLimit(curObj[prop], 4, function(data, callback) {
+                        this._populate(data, remaining, callback);
+                    }.bind(this), callback);
+                }
+
+            } else if (typeof curObj[prop] === "string") {
+                this.model.findById(curObj[prop], function(err, data) {
+                    curObj[prop] = data;
+                    if (remaining.length === 0) {
+                        callback();
+                    } else {
+                        this._populate(curObj[prop], remaining, callback);
+                    }
+                }.bind(this));
+
+            } else {
+                curObj = curObj[prop];
+                callback();
+            }
+        }, callback);
+
+        return this;
+    },
+
+    populate: function(path, callback) {
+        if (!callback) {
+            this.execQueue.push("populate", [path]);
+            return this;
+        }
+
+        var parts = String(path).split(".");
+        return this._populate(this.data, parts, callback);
     },
 
     save: function(callback) {
@@ -261,29 +315,9 @@ Query.prototype = {
     },
 
     exec: function(callback) {
-        if (this.query.id) {
-            client.get({
-                index: model.index,
-                type: model.type,
-                id: this.query.id
-            }, function(err, result) {
-                if (err) {
-                    return callback(err);
-                }
-
-                if (!this.options.lean || this.options.populate) {
-                    result = new model(result);
-                }
-
-                if (this.options.populate) {
-                    result.populate(this.options.populate, callback);
-                } else {
-                    callback(err, result);
-                }
-            });
-
-            return;
-        }
+        var model = this.model;
+        var searchType = "search";
+        var single = typeof this.query.id === "string";
 
         var query = {
             index: model.index,
@@ -309,7 +343,16 @@ Query.prototype = {
         // TODO: Use .get() when only id is being used
         // and use +realtime: true
 
-        client.search(query, function(err, response) {
+        if (this.query.id) {
+            query.body = {
+                ids: _.isArray(this.query.id) ?
+                    [this.query.id] : this.query.id
+            };
+
+            searchType = "mget";
+        }
+
+        client[searchType](query, function(err, response) {
             if (err) {
                 return callback(err);
             }
@@ -323,9 +366,11 @@ Query.prototype = {
             if (this.options.populate) {
                 async.eachLimit(results, 4, function(item, callback) {
                     item.populate(this.options.populate, callback);
-                }.bind(this), callback);
+                }.bind(this), function(err) {
+                    callback(err, single ? results[0] : results);
+                });
             } else {
-                callback(err, results);
+                callback(err, single ? results[0] : results);
             }
         }.bind(this));
 
@@ -362,7 +407,8 @@ module.exports = {
             var Model = function(data) {
                 this.type = name;
                 // TODO: Bring in properties, etc.
-                _.extend(this, data);
+                this.data = data;
+                this.execQueue = [];
                 // TODO: Set virtuals
             };
 
