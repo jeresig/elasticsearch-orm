@@ -40,26 +40,51 @@ var ModelPrototype = {
     },
 
     save: function(callback) {
-        client.index({
-            index: this.index,
-            type: this.type,
-            id: this.id,
-            //version: this.version,
-            body: {
-                
+        this.validate(function(err) {
+            if (err) {
+                return callback(err);
             }
-        }, function(err, response) {
-            // Maybe re-generate to pull in missing id?
-            callback(err, this);
+
+            client.index({
+                index: this.index,
+                type: this.type,
+                id: this.id, // Optional?
+                //version: this.version,
+                body: this.data
+            }, function(err, response) {
+                // Maybe re-generate to pull in missing id?
+                callback(err, this);
+            }.bind(this));
         }.bind(this));
     },
 
     update: function(data, callback) {
-        // Use client.update()
+        this.validate(function(err) {
+            if (err) {
+                return callback(err);
+            }
+
+            client.update({
+                index: this.index,
+                type: this.type,
+                id: this.id,
+                version: this.version,
+                body: {
+                    doc: this.data
+                }
+            }, function(err, response) {
+                // Maybe re-generate to pull in missing id?
+                callback(err, this);
+            }.bind(this));
+        }.bind(this));
     },
 
     remove: function(callback) {
         // Use client.delete
+    },
+
+    validate: function(callback) {
+        callback(null);
     },
 
     exec: function(callback) {
