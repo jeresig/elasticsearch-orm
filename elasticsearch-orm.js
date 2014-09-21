@@ -40,6 +40,10 @@ var ModelPrototype = {
         var remaining = parts;
 
         async.eachLimit(parts, 1, function(prop, callback) {
+            if (remaining.length === 0) {
+                return callback();
+            }
+
             remaining = remaining.splice(1);
             curObj = curObj[prop];
 
@@ -47,31 +51,32 @@ var ModelPrototype = {
                 if (typeof curObj[prop][0] === "string") {
                     // Find many by ID
                     this.model.findById(curObj[prop], function(err, results) {
+                        if (err) {
+                            return callback(err);
+                        }
+
                         for (var i = 0; i < results.length; i++) {
                             curObj[prop][i] = results[i];
                         }
-
-                        if (remaining.length === 0) {
-                            callback();
-                        } else {
-                            this._populate(curObj[prop], remaining, callback);
-                        }
+                        callback();
                     }.bind(this));
 
                 } else {
                     async.eachLimit(curObj[prop], 4, function(data, callback) {
                         this._populate(data, remaining, callback);
-                    }.bind(this), callback);
+                    }.bind(this), function(err) {
+                        remaining = [];
+                        callback(err);
+                    });
                 }
 
             } else if (typeof curObj[prop] === "string") {
                 this.model.findById(curObj[prop], function(err, data) {
-                    curObj[prop] = data;
-                    if (remaining.length === 0) {
-                        callback();
-                    } else {
-                        this._populate(curObj[prop], remaining, callback);
+                    if (!err && data) {
+                        curObj[prop] = data;
                     }
+
+                    callback(err);
                 }.bind(this));
 
             } else {
