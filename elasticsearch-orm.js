@@ -118,6 +118,10 @@ var ModelPrototype = {
     },
 
     update: function(data, callback) {
+        if (!this.id) {
+            return callback(new Error("Cannot update: no ID specified."));
+        }
+
         this.validate(function(err) {
             if (err) {
                 return callback(err);
@@ -132,14 +136,24 @@ var ModelPrototype = {
                     doc: this.data
                 }
             }, function(err, response) {
-                // Maybe re-generate to pull in missing id?
                 callback(err, this);
             }.bind(this));
         }.bind(this));
     },
 
     remove: function(callback) {
+        if (!this.id) {
+            return callback(new Error("Cannot remove: no ID specified."));
+        }
+
         // Use client.delete
+        client.delete({
+            index: this.index,
+            type: this.type,
+            id: this.id
+        }, function(err, response) {
+            callback(err, this);
+        }.bind(this));
     },
 
     validate: function(callback) {
@@ -147,6 +161,10 @@ var ModelPrototype = {
     },
 
     exec: function(callback) {
+        async.eachLimit(this.execQueue, 1, function(call, callback) {
+            this[call[0]].apply(this, call[1].concat([callback]));
+        }.bind(this), callback);
+
         return this;
     }
 };
