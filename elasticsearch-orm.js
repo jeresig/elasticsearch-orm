@@ -175,6 +175,11 @@ var ModelStatics = {
         return callback ? this.exec(callback) : this;
     },
 
+    where: function(query, callback) {
+        var q = new Query(query, this);
+        return callback ? q.exec(callback) : q;
+    },
+
     find: function(query, callback) {
         var q = new Query(query, this);
         return callback ? q.exec(callback) : q;
@@ -216,7 +221,8 @@ var ModelStatics = {
     },
 
     count: function(query, callback) {
-
+        var q = new Query(query, this);
+        return callback ? q.count(callback) : q;
     }
 };
 
@@ -337,6 +343,11 @@ Query.prototype = {
         return callback ? this.exec(callback) : this;
     },
 
+    count: function(query, callback) {
+        this.options.count = true;
+        return callback ? this.exec(callback) : this;
+    },
+
     exec: function(callback) {
         var model = this.model;
         var searchType = "search";
@@ -382,16 +393,21 @@ Query.prototype = {
 
             var results = response.hits.hits;
 
-            if (!this.options.lean || this.options.populate) {
+            if (this.options.count) {
+                results = response.hits.total;
+                single = false;
+
+            } else if (!this.options.lean || this.options.populate) {
                 results = new Results(results, model);
             }
 
-            if (this.options.populate) {
+            if (this.options.populate && !this.options.count) {
                 async.eachLimit(results, 4, function(item, callback) {
                     item.populate(this.options.populate, callback);
                 }.bind(this), function(err) {
                     callback(err, single ? results[0] : results);
                 });
+
             } else {
                 callback(err, single ? results[0] : results);
             }
