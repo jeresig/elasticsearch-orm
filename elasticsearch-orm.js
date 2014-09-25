@@ -16,6 +16,7 @@ var client;
 var Schema = function(options) {
     this.methods = {};
     this.statics = {};
+    this.virtuals = {};
 };
 
 Schema.prototype = {
@@ -24,14 +25,24 @@ Schema.prototype = {
     },
 
     virtual: function(name) {
-        return {
-            "get": function(callback) {
+        this.virtuals[name] = new Virtual();
+        return this.virtuals[name];
+    }
+};
 
-            },
-            "set": function(callback) {
+var Virtual = function() {};
 
-            }
-        };
+Virtual.prototype = {
+    getter: function() {},
+
+    setter: function() {},
+
+    "get": function(callback) {
+        this.getter = callback;
+    },
+
+    "set": function(callback) {
+        this.setter = callback;
     }
 };
 
