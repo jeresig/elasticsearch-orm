@@ -452,32 +452,51 @@ module.exports = {
         }.bind(this));
     },
 
-    model: function(name, schema) {
+    model: function(modelName, schema) {
         if (schema) {
-            var Model = function(data) {
-                this.type = name;
-                // TODO: Bring in properties, etc.
-                this.data = data;
-                this.execQueue = [];
-                // TODO: Set virtuals
-            };
+            var Model = Proxy.createFunction({
+                get: function(receiver, name) {
+                    if (name.indexOf("__") === 0 || name === "prototype") {
+                        return this[name];
+                    }
 
-            Model.displayName = name;
-            Model.index = name;
-            Model.type = name;
+                    if (name === "_type" || name === "_index") {
+                        return modelName;
+                    }
+
+                    // TODO: Handle virtuals
+
+                    return this.__data[name];
+                },
+
+                set: function(receiver, name, val) {
+                    // TODO: Validate data on set
+                    if (name.indexOf("__") === 0 || name === "prototype") {
+                        this[name] = val;
+                        return;
+                    }
+
+                    // TODO: Handle virtuals
+
+                    this.__data[name] = val;
+                }
+            }, function() {
+                this.__data = {};
+                return this;
+            });
 
             Model.prototype = _.extend({}, ModelPrototype);
 
             _.extend(Model, ModelStatics);
 
-            models[name] = Model;
+            models[modelName] = Model;
         }
 
-        if (!(name in models)) {
-            throw "Model not registered: " + name;
+        if (!(modelName in models)) {
+            throw "Model not registered: " + modelName;
         }
 
-        return models[name];
+        return models[modelName];
     },
 
     Schema: Schema
