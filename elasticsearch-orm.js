@@ -456,17 +456,25 @@ module.exports = {
         if (schema) {
             var Model = Proxy.createFunction({
                 get: function(receiver, name) {
-                    if (name.indexOf("__") === 0 || name === "prototype") {
-                        return this[name];
-                    }
-
+                    // Start with hard-coded values
                     if (name === "_type" || name === "_index") {
                         return modelName;
                     }
 
+                    // Then get values from the internal state
+                    if (name in this) {
+                        return this[name];
+                    }
+
                     // TODO: Handle virtuals
 
-                    return this.__data[name];
+                    // Attempt to access user data
+                    if (name in this.__data) {
+                        return this.__data[name];
+                    }
+
+                    // Fallback to prototype methods
+                    return this.prototype[name];
                 },
 
                 set: function(receiver, name, val) {
