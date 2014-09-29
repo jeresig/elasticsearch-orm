@@ -462,11 +462,14 @@ module.exports = {
                     }
 
                     // Then get values from the internal state
-                    if (name in this) {
-                        return this[name];
+                    if (name in ModelStatics) {
+                        return ModelStatics[name].call(this);
                     }
 
-                    // TODO: Handle virtuals
+                    // Handle virtuals
+                    if (name in schema.virtuals) {
+                        return schema.virtuals[name].getter.call(this);
+                    }
 
                     // Attempt to access user data
                     if (name in this.__data) {
@@ -474,7 +477,7 @@ module.exports = {
                     }
 
                     // Fallback to prototype methods
-                    return this.prototype[name];
+                    return ModelPrototype[name].call(this);
                 },
 
                 set: function(receiver, name, val) {
@@ -484,7 +487,11 @@ module.exports = {
                         return;
                     }
 
-                    // TODO: Handle virtuals
+                    // Handle virtuals
+                    if (name in schema.virtuals) {
+                        schema.virtuals[name].setter.call(this, val);
+                        return;
+                    }
 
                     this.__data[name] = val;
                 }
@@ -492,10 +499,6 @@ module.exports = {
                 this.__data = {};
                 return this;
             });
-
-            Model.prototype = _.extend({}, ModelPrototype);
-
-            _.extend(Model, ModelStatics);
 
             models[modelName] = Model;
         }
