@@ -13,7 +13,9 @@ var models = {};
 // Store the client connection as well so that it's "shared"
 var client;
 
-var Schema = function(options) {
+var Schema = function(props) {
+    // TODO: Validate props definition
+    this.props = props;
     this.methods = {};
     this.statics = {};
     this.virtuals = {};
@@ -454,51 +456,48 @@ module.exports = {
 
     model: function(modelName, schema) {
         if (schema) {
-            var Model = Proxy.createFunction({
-                get: function(receiver, name) {
-                    // Start with hard-coded values
-                    if (name === "_type" || name === "_index") {
-                        return modelName;
-                    }
-
-                    // Then get values from the internal state
-                    if (name in ModelStatics) {
-                        return ModelStatics[name].call(this);
-                    }
-
-                    // Handle virtuals
-                    if (name in schema.virtuals) {
-                        return schema.virtuals[name].getter.call(this);
-                    }
-
-                    // Attempt to access user data
-                    if (name in this.__data) {
-                        return this.__data[name];
-                    }
-
-                    // Fallback to prototype methods
-                    return ModelPrototype[name].call(this);
-                },
-
-                set: function(receiver, name, val) {
-                    // TODO: Validate data on set
-                    if (name.indexOf("__") === 0 || name === "prototype") {
-                        this[name] = val;
-                        return;
-                    }
-
-                    // Handle virtuals
-                    if (name in schema.virtuals) {
-                        schema.virtuals[name].setter.call(this, val);
-                        return;
-                    }
-
-                    this.__data[name] = val;
-                }
-            }, function() {
+            var Model = function(data) {
                 this.__data = {};
-                return this;
-            });
+
+                for (var name in data) {
+                    this[name] = data[name];
+                }
+            };
+
+            Model.prototype = {
+                _type: name,
+                _index: name
+            };
+
+            _.extend(Model, ModelStatics);
+            _.extend(Model.prototype, ModelPrototype);
+
+            // Define properties
+            Object.keys(schema.props).forEach(function(name) {
+                Object.definePrototype(Model.prototype, {
+                    get: function() {
+                        return this.__data[name];
+                    }.bind(this),
+
+                    set: function(value) {
+                        // TODO: Validate
+                        this.__data[name] = value;
+                    }.bind(this)
+                });
+            }.bind(this));
+
+            // Then define the virtual properties
+            Object.keys(schema.virtuals).forEach(function(name) {
+                Object.definePrototype(Model.prototype, {
+                    get: function() {
+                        return schema.virtuals[name].getter.call(this);
+                    }.bind(this),
+
+                    set: function(value) {
+                        schema.virtuals[name].setter.call(this, val);
+                    }.bind(this)
+                });
+            }.bind(this));
 
             models[modelName] = Model;
         }
