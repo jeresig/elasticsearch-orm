@@ -29,6 +29,10 @@ Schema.prototype = {
     virtual: function(name) {
         this.virtuals[name] = new Virtual();
         return this.virtuals[name];
+    },
+
+    add: function(props) {
+        _.extend(this.props, props);
     }
 };
 
@@ -470,7 +474,10 @@ module.exports = {
             };
 
             _.extend(Model, ModelStatics);
+            _.extend(Model, schema.statics);
+
             _.extend(Model.prototype, ModelPrototype);
+            _.extend(Model.prototype, schema.methods);
 
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
