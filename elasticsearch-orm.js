@@ -1,5 +1,6 @@
 var url = require("url");
 var events = require("events");
+var stream = require("stream");
 
 var _ = require("lodash");
 var async = require("async");
@@ -434,9 +435,35 @@ Query.prototype = {
     },
 
     stream: function() {
-        // TODO: Return stream object
         // Events: data, error, close
         // Support: this.pause(), this.resume()
+        var query = this;
+        var rs = stream.Readable();
+        var start = 0;
+
+        rs._read = function() {
+            query.skip(start);
+
+            query.exec(function(err, results) {
+                if (err) {
+                    rs.emit("error", err);
+                    return;
+                }
+
+                if (!results || results.length === 0) {
+                    rs.push(null);
+                    return;
+                }
+
+                results.forEach(fucntion(item) {
+                    rs.push(item);
+                });
+            });
+
+            start += query.options.limit;
+        };
+
+        return rs;
     }
 };
 
