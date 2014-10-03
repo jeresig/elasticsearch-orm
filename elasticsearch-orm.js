@@ -175,6 +175,16 @@ var ModelPrototype = {
     },
 
     validate: function(callback) {
+        for (var prop in this.schema.props) {
+            var type = this.schema.props[prop];
+
+            if (prop in this.__data) {
+                if (!(this.__data[prop] instanceof type)) {
+                    return callback(new Error("Mis-match type: " + prop));
+                }
+            }
+        }
+
         callback(null);
     },
 
@@ -489,6 +499,7 @@ module.exports = {
         if (schema) {
             var Model = function(data) {
                 this.__data = {};
+                this.schema = schema;
 
                 for (var name in data) {
                     this[name] = data[name];
