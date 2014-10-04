@@ -14,6 +14,34 @@ var models = {};
 // Store the client connection as well so that it's "shared"
 var client;
 
+var SchemaType = function() {
+    this.options = {
+        index: false,
+        required: false
+    };
+
+    this.getter = function() {};
+    this.setter = function() {};
+};
+
+SchemaType.prototype = {
+    default: function(val) {
+        this.options.default = val;
+    },
+
+    index: function(val) {
+        this.options.index = !!val;
+    },
+
+    required: function(val) {
+        this.options.required = !!val;
+    },
+
+    select: function(val) {
+        this.options.select = val;
+    }
+};
+
 var Schema = function(props) {
     // TODO: Validate props definition
     this.props = props;
