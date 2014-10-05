@@ -15,32 +15,75 @@ var models = {};
 var client;
 
 var SchemaType = function() {
-    this.options = {
-        index: false,
-        required: false
-    };
-
-    this.getter = function() {};
-    this.setter = function() {};
+    this.init();
 };
 
 SchemaType.prototype = {
-    default: function(val) {
-        this.options.default = val;
+    init: function() {
+        this.options = {};
+        this.getter = function() {};
+        this.setter = function() {};
     },
 
-    index: function(val) {
-        this.options.index = !!val;
+    validate: function(val) {
+        for (var option in this.options) {
+            if (this.options[option] && this[option]) {
+                // TODO: Maybe better handle exceptions?
+                val = this.option(val);
+            }
+        }
+
+        return val;
+    },
+
+    default: function(val) {
+        return val == null ? this.options.default : val;
     },
 
     required: function(val) {
-        this.options.required = !!val;
-    },
+        if (val == null) {
+            throw "Undefined property, value required.";
+        }
 
-    select: function(val) {
-        this.options.select = val;
+        return val;
     }
 };
+
+var SchemaString = function() {
+    this.init();
+};
+
+SchemaString = new SchemaType();
+
+_.extend(SchemaString.prototype, {
+    "enum": function(val) {
+        if (this.options.enum.indexOf(val) < 0) {
+            throw "Expected enum value not found.";
+        }
+
+        return val;
+    },
+
+    match: function(val) {
+        if (this.options.match.exec(val)) {
+            throw "Value does not match regex.";
+        }
+
+        return val;
+    },
+
+    lowercase: function(val) {
+        return val.toLowerCase();
+    },
+
+    uppercase: function(val) {
+        return val.toUpperCase();
+    },
+
+    trim: function(val) {
+        return val.trim();
+    }
+});
 
 var Schema = function(props) {
     // TODO: Validate props definition
