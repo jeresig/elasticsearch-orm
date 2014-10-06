@@ -85,6 +85,32 @@ _.extend(SchemaString.prototype, {
     }
 });
 
+var SchemaNumber = function() {
+    this.init();
+};
+
+SchemaNumber = new SchemaType();
+
+_.extend(SchemaNumber.prototype, {
+    min: function(val) {
+        if (val < this.options.min) {
+            throw "Expected value to be greater than " +
+                this.options.min + ".";
+        }
+
+        return val;
+    },
+
+    max: function(val) {
+        if (val > this.options.max) {
+            throw "Expected value to be less than " +
+                this.options.max + ".";
+        }
+
+        return val;
+    }
+});
+
 var Schema = function(props) {
     // TODO: Validate props definition
     this.props = props;
