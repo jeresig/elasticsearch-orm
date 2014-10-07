@@ -4,6 +4,7 @@ var stream = require("stream");
 
 var _ = require("lodash");
 var async = require("async");
+var diff = require("deep-diff").diff;
 var es = require("elasticsearch");
 
 // Store the models outside of the module, this mimics Mongoose's
@@ -210,10 +211,22 @@ var ModelPrototype = {
         }
 
         var parts = String(path).split(".");
-        return this._populate(this.data, parts, callback);
+        return this._populate(this.__data, parts, callback);
+    },
+
+    diff: function() {
+        return diff(this.__origData, this.__data);
+    },
+
+    hasChanged: function() {
+        return !!(diff && diff.length > 0);
     },
 
     save: function(callback) {
+        if (!this.hasChanged()) {
+            return callback();
+        }
+
         this.validate(function(err) {
             if (err) {
                 return callback(err);
@@ -224,7 +237,7 @@ var ModelPrototype = {
                 type: this.type,
                 id: this.id, // Optional?
                 //version: this.version,
-                body: this.data
+                body: this.__data
             }, function(err, response) {
                 // Maybe re-generate to pull in missing id?
                 callback(err, this);
@@ -235,6 +248,10 @@ var ModelPrototype = {
     update: function(data, callback) {
         if (!this.id) {
             return callback(new Error("Cannot update: no ID specified."));
+        }
+
+        if (!this.hasChanged()) {
+            return callback();
         }
 
         this.validate(function(err) {
@@ -248,7 +265,7 @@ var ModelPrototype = {
                 id: this.id,
                 version: this.version,
                 body: {
-                    doc: this.data
+                    doc: this.__data
                 }
             }, function(err, response) {
                 callback(err, this);
@@ -595,6 +612,7 @@ module.exports = {
     model: function(modelName, schema) {
         if (schema) {
             var Model = function(data) {
+                this.__origData = _.cloneDeep(data);
                 this.__data = {};
                 this.schema = schema;
 
