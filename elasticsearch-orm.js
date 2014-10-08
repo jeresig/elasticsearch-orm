@@ -19,6 +19,16 @@ var SchemaType = function() {
     this.init();
 };
 
+SchemaType.findType = function(val) {
+    for (var i = 0, l = SchemaType.types.length; i < l; i++) {
+        var type = SchemaType.types[i];
+        if (type.object === val || val.type === type.type ||
+            type.object === val.type) {
+                return type;
+        }
+    }
+};
+
 SchemaType.prototype = {
     init: function() {
         this.options = {};
@@ -54,6 +64,8 @@ var SchemaString = function() {
     this.init();
 };
 
+SchemaString.object = String;
+SchemaString.type = "string";
 SchemaString = new SchemaType();
 
 _.extend(SchemaString.prototype, {
@@ -90,6 +102,8 @@ var SchemaNumber = function() {
     this.init();
 };
 
+SchemaNumber.object = Number;
+SchemaNumber.type = "number";
 SchemaNumber = new SchemaType();
 
 _.extend(SchemaNumber.prototype, {
@@ -111,6 +125,38 @@ _.extend(SchemaNumber.prototype, {
         return val;
     }
 });
+
+var SchemaBoolean = function() {
+    this.init();
+};
+
+SchemaBoolean.object = Boolean;
+SchemaBoolean.type = "boolean";
+SchemaBoolean = new SchemaType();
+
+var SchemaDate = function() {
+    this.init();
+};
+
+SchemaDate.object = Date;
+SchemaDate.type = "date";
+SchemaDate = new SchemaType();
+
+var SchemaObjectId = function() {
+    this.init();
+};
+
+SchemaObjectId.object = SchemaObjectId;
+SchemaObjectId.type = "objectid";
+SchemaObjectId = new SchemaType();
+
+SchemaType.types = [
+    SchemaString,
+    SchemaNumber,
+    SchemaBoolean,
+    SchemaDate,
+    SchemaObjectId
+];
 
 var Schema = function(props) {
     // TODO: Validate props definition
@@ -290,10 +336,10 @@ var ModelPrototype = {
 
     validate: function(callback) {
         for (var prop in this.schema.props) {
-            var type = this.schema.props[prop];
+            var type = SchemaType.findType(this.schema.props[prop]);
 
             if (prop in this.__data) {
-                if (!(this.__data[prop] instanceof type)) {
+                if (!type.validate(this.__data[prop])) {
                     return callback(new Error("Mis-match type: " + prop));
                 }
             }
