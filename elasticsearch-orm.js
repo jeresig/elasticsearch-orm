@@ -334,15 +334,56 @@ var ModelPrototype = {
         }.bind(this));
     },
 
-    validate: function(callback) {
-        for (var prop in this.schema.props) {
-            var type = SchemaType.findType(this.schema.props[prop]);
+    validate: function(data, schema, callback) {
+        if (arguments.length === 1) {
+            callback = schema;
+            data = this.__data;
+            schema = this.schema.props;
+        }
 
-            if (prop in this.__data) {
-                if (!type.validate(this.__data[prop])) {
-                    return callback(new Error("Mis-match type: " + prop));
+        // TODO: Recursively generate the path
+        var wrongProp;
+
+        for (var prop in schema) {
+            var schemaProp = schema[prop];
+            var type = SchemaType.findType(schemaProp);
+
+            if (!type) {
+                if (_.isArray(schemaProp)) {
+                    if (!_.isArray(data[prop])) {
+                        wrongProp = prop;
+                        break;
+                    }
+
+                    for (var i = 0, l = data[prop].length; i < l; i++) {
+                        var ret = this.validate(data[prop][i], schemaProp[0]);
+                        if (ret) {
+                            wrongProp = prop + "." + i;
+                            break
+                        }
+                    }
+
+                // It's an object
+                } else {
+                    // TODO: Test objects
                 }
             }
+
+            if (prop in data && !type.validate(data[prop])) {
+                wrongProp = prop;
+            }
+
+            if (wrongProp) {
+                break;
+            }
+        }
+
+        if (!callback) {
+            return wrongProp;
+        }
+
+        if (wrongProp) {
+            return callback(new Error("Mis-match type: " + wrongProp));
         }
 
         callback(null);
