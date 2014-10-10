@@ -334,43 +334,48 @@ var ModelPrototype = {
         }.bind(this));
     },
 
-    validate: function(data, schema, callback) {
-        if (arguments.length === 1) {
-            callback = schema;
-            data = this.__data;
-            schema = this.schema.props;
-        }
-
-        // TODO: Recursively generate the path
+    _validate: function(data, schema, path) {
         var wrongProp;
 
         for (var prop in schema) {
+            var dataProp = data[prop];
             var schemaProp = schema[prop];
             var type = SchemaType.findType(schemaProp);
+            var propPath = path + "." + prop;
 
             if (!type) {
                 if (_.isArray(schemaProp)) {
-                    if (!_.isArray(data[prop])) {
-                        wrongProp = prop;
+                    if (!_.isArray(dataProp)) {
+                        wrongProp = propPath;
                         break;
                     }
 
-                    for (var i = 0, l = data[prop].length; i < l; i++) {
-                        var ret = this.validate(data[prop][i], schemaProp[0]);
+                    for (var i = 0, l = dataProp.length; i < l; i++) {
+                        var itemPath = propPath + "[" + i + "]";
+                        var ret = this._validate(dataProp[i], schemaProp[0],
+                            itemPath);
                         if (ret) {
-                            wrongProp = prop + "." + i;
+                            wrongProp = itemPath;
                             break
                         }
                     }
 
                 // It's an object
+                } else if (_.isPlainObject(schemaProp)) {
+                    if (!_.isPlainObject(dataProp)) {
+                        wrongProp = propPath;
+                        break;
+                    }
+
+                    this._validate(dataProp, schemaProp, itemPath);
+
                 } else {
-                    // TODO: Test objects
+                    throw new Error("Unknown schema for: " + prop);
                 }
             }
 
-            if (prop in data && !type.validate(data[prop])) {
-                wrongProp = prop;
+            if (!type.validate(dataProp)) {
+                wrongProp = propPath;
             }
 
             if (wrongProp) {
@@ -378,15 +383,12 @@ var ModelPrototype = {
             }
         }
 
-        if (!callback) {
-            return wrongProp;
-        }
+        return wrongProp;
+    },
 
-        if (wrongProp) {
-            return callback(new Error("Mis-match type: " + wrongProp));
-        }
-
-        callback(null);
+    validate: function(callback) {
+        var wrongProp = this._validate(this.__data, this.schema.props, "");
+        callback(wrongProp ? new Error("Mis-match type: " + wrongProp) : null);
     },
 
     exec: function(callback) {
