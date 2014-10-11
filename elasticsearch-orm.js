@@ -159,7 +159,6 @@ SchemaType.types = [
 ];
 
 var Schema = function(props) {
-    // TODO: Validate props definition
     this.props = props;
     this.methods = {};
     this.statics = {};
@@ -273,7 +272,7 @@ var ModelPrototype = {
             return callback();
         }
 
-        this.validate(function(err) {
+        return this.validate(function(err) {
             if (err) {
                 return callback(err);
             }
@@ -300,7 +299,7 @@ var ModelPrototype = {
             return callback();
         }
 
-        this.validate(function(err) {
+        return this.validate(function(err) {
             if (err) {
                 return callback(err);
             }
@@ -332,6 +331,8 @@ var ModelPrototype = {
         }, function(err, response) {
             callback(err, this);
         }.bind(this));
+
+        return this;
     },
 
     _validate: function(data, schema, path) {
@@ -389,6 +390,7 @@ var ModelPrototype = {
     validate: function(callback) {
         var wrongProp = this._validate(this.__data, this.schema.props, "");
         callback(wrongProp ? new Error("Mis-match type: " + wrongProp) : null);
+        return this;
     },
 
     exec: function(callback) {
@@ -668,7 +670,7 @@ Query.prototype = {
                     return;
                 }
 
-                results.forEach(fucntion(item) {
+                results.forEach(function(item) {
                     rs.push(item);
                 });
             });
@@ -699,63 +701,65 @@ module.exports = {
     },
 
     model: function(modelName, schema) {
-        if (schema) {
-            var Model = function(data) {
-                this.__origData = _.cloneDeep(data);
-                this.__data = {};
-                this.schema = schema;
+        if (!schema) {
+            if (!(modelName in models)) {
+                throw "Model not registered: " + modelName;
+            }
 
-                for (var name in data) {
-                    this[name] = data[name];
-                }
-            };
-
-            Model.prototype = {
-                _type: name,
-                _index: name
-            };
-
-            _.extend(Model, ModelStatics);
-            _.extend(Model, schema.statics);
-
-            _.extend(Model.prototype, ModelPrototype);
-            _.extend(Model.prototype, schema.methods);
-
-            // Define properties
-            Object.keys(schema.props).forEach(function(name) {
-                Object.definePrototype(Model.prototype, {
-                    get: function() {
-                        return this.__data[name];
-                    }.bind(this),
-
-                    set: function(value) {
-                        // TODO: Validate
-                        this.__data[name] = value;
-                    }.bind(this)
-                });
-            }.bind(this));
-
-            // Then define the virtual properties
-            Object.keys(schema.virtuals).forEach(function(name) {
-                Object.definePrototype(Model.prototype, {
-                    get: function() {
-                        return schema.virtuals[name].getter.call(this);
-                    }.bind(this),
-
-                    set: function(value) {
-                        schema.virtuals[name].setter.call(this, val);
-                    }.bind(this)
-                });
-            }.bind(this));
-
-            models[modelName] = Model;
+            return models[modelName];
         }
 
-        if (!(modelName in models)) {
-            throw "Model not registered: " + modelName;
-        }
+        var Model = function(data) {
+            this.__origData = _.cloneDeep(data);
+            this.__data = {};
+            this.schema = schema;
 
-        return models[modelName];
+            for (var name in data) {
+                this[name] = data[name];
+            }
+        };
+
+        Model.prototype = {
+            _type: name,
+            _index: name
+        };
+
+        _.extend(Model, ModelStatics);
+        _.extend(Model, schema.statics);
+
+        _.extend(Model.prototype, ModelPrototype);
+        _.extend(Model.prototype, schema.methods);
+
+        // Define properties
+        Object.keys(schema.props).forEach(function(name) {
+            Object.definePrototype(Model.prototype, {
+                get: function() {
+                    return this.__data[name];
+                }.bind(this),
+
+                set: function(value) {
+                    // TODO: Validate
+                    this.__data[name] = value;
+                }.bind(this)
+            });
+        }.bind(this));
+
+        // Then define the virtual properties
+        Object.keys(schema.virtuals).forEach(function(name) {
+            Object.definePrototype(Model.prototype, {
+                get: function() {
+                    return schema.virtuals[name].getter.call(this);
+                }.bind(this),
+
+                set: function(value) {
+                    schema.virtuals[name].setter.call(this, val);
+                }.bind(this)
+            });
+        }.bind(this));
+
+        models[modelName] = Model;
+
+        return Model;
     },
 
     Schema: Schema
