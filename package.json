@@ -4,7 +4,7 @@
   "description": "An ORM, in the style of Mongoose, for Elasticsearch.",
   "main": "elasticsearch-orm.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha tests/"
   },
   "repository": {
     "type": "git",
@@ -28,5 +28,8 @@
     "async": "^0.9.0",
     "node-proxy": "^0.8.0",
     "deep-diff": "^0.2.0"
+  },
+  "devDependencies": {
+    "mocha": "^1.21.5"
   }
 }
