@@ -40,7 +40,7 @@ SchemaType.prototype = {
         for (var option in this.options) {
             if (this.options[option] && this[option]) {
                 // TODO: Maybe better handle exceptions?
-                val = this.option(val);
+                val = this[option](val);
             }
         }
 
@@ -717,11 +717,38 @@ module.exports = {
             for (var name in data) {
                 this[name] = data[name];
             }
+
+            // Define properties
+            Object.keys(schema.props).forEach(function(name) {
+                Object.defineProperty(Model.prototype, name, {
+                    get: function() {
+                        return this.__data[name];
+                    }.bind(this),
+
+                    set: function(value) {
+                        // TODO: Validate
+                        this.__data[name] = value;
+                    }.bind(this)
+                });
+            }.bind(this));
+
+            // Then define the virtual properties
+            Object.keys(schema.virtuals).forEach(function(name) {
+                Object.defineProperty(Model.prototype, name, {
+                    get: function() {
+                        return schema.virtuals[name].getter.call(this);
+                    }.bind(this),
+
+                    set: function(value) {
+                        schema.virtuals[name].setter.call(this, val);
+                    }.bind(this)
+                });
+            }.bind(this));
         };
 
         Model.prototype = {
-            _type: name,
-            _index: name
+            _type: modelName,
+            _index: modelName
         };
 
         _.extend(Model, ModelStatics);
@@ -729,33 +756,6 @@ module.exports = {
 
         _.extend(Model.prototype, ModelPrototype);
         _.extend(Model.prototype, schema.methods);
-
-        // Define properties
-        Object.keys(schema.props).forEach(function(name) {
-            Object.definePrototype(Model.prototype, {
-                get: function() {
-                    return this.__data[name];
-                }.bind(this),
-
-                set: function(value) {
-                    // TODO: Validate
-                    this.__data[name] = value;
-                }.bind(this)
-            });
-        }.bind(this));
-
-        // Then define the virtual properties
-        Object.keys(schema.virtuals).forEach(function(name) {
-            Object.definePrototype(Model.prototype, {
-                get: function() {
-                    return schema.virtuals[name].getter.call(this);
-                }.bind(this),
-
-                set: function(value) {
-                    schema.virtuals[name].setter.call(this, val);
-                }.bind(this)
-            });
-        }.bind(this));
 
         models[modelName] = Model;
 
