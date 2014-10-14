@@ -37,6 +37,10 @@ SchemaType.prototype = {
     },
 
     validate: function(val) {
+        if (this.coherce) {
+            val = this.coherce(val);
+        }
+
         for (var option in this.options) {
             if (this.options[option] && this[option]) {
                 // TODO: Maybe better handle exceptions?
@@ -66,9 +70,13 @@ var SchemaString = function() {
 
 SchemaString.object = String;
 SchemaString.type = "string";
-SchemaString = new SchemaType();
+SchemaString.prototype = new SchemaType();
 
 _.extend(SchemaString.prototype, {
+    coherce: function(val) {
+        return String(val);
+    },
+
     "enum": function(val) {
         if (this.options.enum.indexOf(val) < 0) {
             throw "Expected enum value not found.";
@@ -104,9 +112,13 @@ var SchemaNumber = function() {
 
 SchemaNumber.object = Number;
 SchemaNumber.type = "number";
-SchemaNumber = new SchemaType();
+SchemaNumber.prototype = new SchemaType();
 
 _.extend(SchemaNumber.prototype, {
+    coherce: function(val) {
+        return parseFloat(val);
+    },
+
     min: function(val) {
         if (val < this.options.min) {
             throw "Expected value to be greater than " +
@@ -132,7 +144,13 @@ var SchemaBoolean = function() {
 
 SchemaBoolean.object = Boolean;
 SchemaBoolean.type = "boolean";
-SchemaBoolean = new SchemaType();
+SchemaBoolean.prototype = new SchemaType();
+
+_.extend(SchemaBoolean.prototype, {
+    coherce: function(val) {
+        return !!val;
+    }
+});
 
 var SchemaDate = function() {
     this.init();
@@ -140,7 +158,13 @@ var SchemaDate = function() {
 
 SchemaDate.object = Date;
 SchemaDate.type = "date";
-SchemaDate = new SchemaType();
+SchemaDate.prototype = new SchemaType();
+
+_.extend(SchemaDate.prototype, {
+    coherce: function(val) {
+        return new Date(val);
+    }
+});
 
 var SchemaObjectId = function() {
     this.init();
@@ -148,7 +172,7 @@ var SchemaObjectId = function() {
 
 SchemaObjectId.object = SchemaObjectId;
 SchemaObjectId.type = "objectid";
-SchemaObjectId = new SchemaType();
+SchemaObjectId.prototype = new SchemaType();
 
 SchemaType.types = [
     SchemaString,
@@ -720,13 +744,16 @@ module.exports = {
 
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
+                var schemaProp = schema.props[name];
+                var type = new (SchemaType.findType(schemaProp));
+
                 Object.defineProperty(Model.prototype, name, {
                     get: function() {
                         return this.__data[name];
                     }.bind(this),
 
                     set: function(value) {
-                        // TODO: Validate
+                        value = type.validate(value);
                         this.__data[name] = value;
                     }.bind(this)
                 });
