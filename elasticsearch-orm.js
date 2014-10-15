@@ -57,7 +57,7 @@ SchemaType.prototype = {
 
     required: function(val) {
         if (val == null) {
-            throw "Undefined property, value required.";
+            throw new Error("Undefined property, value required.");
         }
 
         return val;
@@ -79,7 +79,7 @@ _.extend(SchemaString.prototype, {
 
     "enum": function(val) {
         if (this.options.enum.indexOf(val) < 0) {
-            throw "Expected enum value not found.";
+            throw new Error("Expected enum value not found.");
         }
 
         return val;
@@ -87,7 +87,7 @@ _.extend(SchemaString.prototype, {
 
     match: function(val) {
         if (this.options.match.exec(val)) {
-            throw "Value does not match regex.";
+            throw new Error("Value does not match regex.");
         }
 
         return val;
@@ -121,8 +121,8 @@ _.extend(SchemaNumber.prototype, {
 
     min: function(val) {
         if (val < this.options.min) {
-            throw "Expected value to be greater than " +
-                this.options.min + ".";
+            throw new Error("Expected value to be greater than " +
+                this.options.min + ".");
         }
 
         return val;
@@ -130,8 +130,8 @@ _.extend(SchemaNumber.prototype, {
 
     max: function(val) {
         if (val > this.options.max) {
-            throw "Expected value to be less than " +
-                this.options.max + ".";
+            throw new Error("Expected value to be less than " +
+                this.options.max + ".");
         }
 
         return val;
@@ -727,7 +727,7 @@ module.exports = {
     model: function(modelName, schema) {
         if (!schema) {
             if (!(modelName in models)) {
-                throw "Model not registered: " + modelName;
+                throw new Error("Model not registered: " + modelName);
             }
 
             return models[modelName];
