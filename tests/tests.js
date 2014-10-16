@@ -57,16 +57,49 @@ describe("Model", function() {
 });
 
 describe("String Schema Type", function() {
-    before(function() {
-        es.model("Test", new es.Schema({
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
             name: String
         }));
-    });
 
-    it("check validation on property set", function() {
-        var Test = es.model("Test");
         var test = new Test();
         test.name = false;
         expect(test.name).to.equal("false");
+    });
+
+    it("check schema type", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String}
+        }));
+
+        var test = new Test();
+        test.name = false;
+        expect(test.name).to.equal("false");
+    });
+
+    it("check schema string type", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: "string"}
+        }));
+
+        var test = new Test();
+        test.name = false;
+        expect(test.name).to.equal("false");
+    });
+
+    it("check schema type", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String, "enum": [
+                "cat", "dog"
+            ]}
+        }));
+
+        var test = new Test();
+        test.name = "cat";
+        expect(test.name).to.equal("cat");
+
+        expect(function() {
+            test.name = "test";
+        }).to.throwError(/Expected enum value not found/);
     });
 });

@@ -15,8 +15,8 @@ var models = {};
 // Store the client connection as well so that it's "shared"
 var client;
 
-var SchemaType = function() {
-    this.init();
+var SchemaType = function(options) {
+    this.init(options);
 };
 
 SchemaType.findType = function(val) {
@@ -30,8 +30,8 @@ SchemaType.findType = function(val) {
 };
 
 SchemaType.prototype = {
-    init: function() {
-        this.options = {};
+    init: function(options) {
+        this.options = options || {};
         this.getter = function() {};
         this.setter = function() {};
     },
@@ -64,8 +64,8 @@ SchemaType.prototype = {
     }
 };
 
-var SchemaString = function() {
-    this.init();
+var SchemaString = function(options) {
+    this.init(options);
 };
 
 SchemaString.object = String;
@@ -106,8 +106,8 @@ _.extend(SchemaString.prototype, {
     }
 });
 
-var SchemaNumber = function() {
-    this.init();
+var SchemaNumber = function(options) {
+    this.init(options);
 };
 
 SchemaNumber.object = Number;
@@ -138,8 +138,8 @@ _.extend(SchemaNumber.prototype, {
     }
 });
 
-var SchemaBoolean = function() {
-    this.init();
+var SchemaBoolean = function(options) {
+    this.init(options);
 };
 
 SchemaBoolean.object = Boolean;
@@ -152,8 +152,8 @@ _.extend(SchemaBoolean.prototype, {
     }
 });
 
-var SchemaDate = function() {
-    this.init();
+var SchemaDate = function(options) {
+    this.init(options);
 };
 
 SchemaDate.object = Date;
@@ -166,8 +166,8 @@ _.extend(SchemaDate.prototype, {
     }
 });
 
-var SchemaObjectId = function() {
-    this.init();
+var SchemaObjectId = function(options) {
+    this.init(options);
 };
 
 SchemaObjectId.object = SchemaObjectId;
@@ -745,7 +745,7 @@ module.exports = {
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
                 var schemaProp = schema.props[name];
-                var type = new (SchemaType.findType(schemaProp));
+                var type = new (SchemaType.findType(schemaProp))(schemaProp);
 
                 Object.defineProperty(Model.prototype, name, {
                     get: function() {
