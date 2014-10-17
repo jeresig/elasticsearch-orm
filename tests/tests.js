@@ -65,6 +65,18 @@ describe("String Schema Type", function() {
         var test = new Test();
         test.name = false;
         expect(test.name).to.equal("false");
+
+        expect(function() {
+            test.name = null;
+        }).to.throwError(/Not a valid string/);
+
+        expect(function() {
+            test.name = undefined;
+        }).to.throwError(/Not a valid string/);
+
+        expect(function() {
+            test.name = {};
+        }).to.throwError(/Not a valid string/);
     });
 
     it("check schema type", function() {
@@ -87,7 +99,7 @@ describe("String Schema Type", function() {
         expect(test.name).to.equal("false");
     });
 
-    it("check schema type", function() {
+    it("check schema enum type", function() {
         var Test = es.model("Test", new es.Schema({
             name: {type: String, "enum": [
                 "cat", "dog"
@@ -101,5 +113,107 @@ describe("String Schema Type", function() {
         expect(function() {
             test.name = "test";
         }).to.throwError(/Expected enum value not found/);
+    });
+
+    it("lowercase", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String, lowercase: true}
+        }));
+
+        var test = new Test();
+        test.name = "Cat";
+        expect(test.name).to.equal("cat");
+    });
+
+    it("uppercase", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String, uppercase: true}
+        }));
+
+        var test = new Test();
+        test.name = "Cat";
+        expect(test.name).to.equal("CAT");
+    });
+
+    it("trim", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String, trim: true}
+        }));
+
+        var test = new Test();
+        test.name = "       Cat   \n\t ";
+        expect(test.name).to.equal("Cat");
+    });
+});
+
+describe("Number Schema Type", function() {
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: Number
+        }));
+
+        var test = new Test();
+        test.val = 5;
+        expect(test.val).to.equal(5);
+
+        test.val = "3";
+        expect(test.val).to.equal(3);
+
+        test.val = "3.1459";
+        expect(test.val).to.equal(3.1459);
+
+        expect(function() {
+            test.val = "lemon";
+        }).to.throwError(/Not a number/);
+    });
+
+    it("check schema type", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: Number}
+        }));
+
+        var test = new Test();
+        test.val = "3";
+        expect(test.val).to.equal(3);
+    });
+
+    it("check schema number type", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: "number"}
+        }));
+
+        var test = new Test();
+        test.val = "3";
+        expect(test.val).to.equal(3);
+    });
+
+    it("check min", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: Number, min: 2}
+        }));
+
+        var test = new Test();
+
+        test.val = 3;
+        expect(test.val).to.equal(3);
+
+        expect(function() {
+            test.val = 1;
+        }).to.throwError(/Expected value to be greater than 2/);
+    });
+
+    it("check max", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: Number, max: 3}
+        }));
+
+        var test = new Test();
+
+        test.val = 2;
+        expect(test.val).to.equal(2);
+
+        expect(function() {
+            test.val = 4;
+        }).to.throwError(/Expected value to be less than 3/);
     });
 });

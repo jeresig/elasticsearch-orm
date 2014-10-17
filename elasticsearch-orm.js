@@ -74,6 +74,10 @@ SchemaString.prototype = new SchemaType();
 
 _.extend(SchemaString.prototype, {
     coherce: function(val) {
+        if (typeof val === "object" || val === undefined) {
+            throw new Error("Not a valid string.");
+        }
+
         return String(val);
     },
 
@@ -116,7 +120,13 @@ SchemaNumber.prototype = new SchemaType();
 
 _.extend(SchemaNumber.prototype, {
     coherce: function(val) {
-        return parseFloat(val);
+        val = parseFloat(val);
+
+        if (isNaN(val)) {
+            throw new Error("Not a number.");
+        }
+
+        return val;
     },
 
     min: function(val) {
