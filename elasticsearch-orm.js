@@ -172,7 +172,12 @@ SchemaDate.prototype = new SchemaType();
 
 _.extend(SchemaDate.prototype, {
     coherce: function(val) {
-        return new Date(val);
+        val = new Date(val);
+
+        // Use this to trigger an exception on invalid date
+        val.toISOString();
+
+        return val;
     }
 });
 

@@ -217,3 +217,48 @@ describe("Number Schema Type", function() {
         }).to.throwError(/Expected value to be less than 3/);
     });
 });
+
+describe("Date Schema Type", function() {
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: Date
+        }));
+
+        var testTime = (new Date("2014/10/17")).getTime();
+
+        var test = new Test();
+        test.val = "2014/10/17";
+        expect(test.val.getTime()).to.equal(testTime);
+
+        test.val = new Date("2014/10/17");
+        expect(test.val.getTime()).to.equal(testTime);
+
+        expect(function() {
+            test.val = "foo";
+        }).to.throwError(/Invalid time value/);
+    });
+
+    it("check schema type", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: Date}
+        }));
+
+        var testTime = (new Date("2014/10/17")).getTime();
+
+        var test = new Test();
+        test.val = "2014/10/17";
+        expect(test.val.getTime()).to.equal(testTime);
+    });
+
+    it("check schema date type", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: "date"}
+        }));
+
+        var testTime = (new Date("2014/10/17")).getTime();
+
+        var test = new Test();
+        test.val = "2014/10/17";
+        expect(test.val.getTime()).to.equal(testTime);
+    });
+});
