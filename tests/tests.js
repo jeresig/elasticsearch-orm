@@ -262,3 +262,51 @@ describe("Date Schema Type", function() {
         expect(test.val.getTime()).to.equal(testTime);
     });
 });
+
+
+describe("Array Schema Type", function() {
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: [String]
+        }));
+
+        var test = new Test();
+        test.names = [false];
+        expect(test.names[0]).to.equal("false");
+
+        /*
+        expect(function() {
+            test.name = null;
+        }).to.throwError(/Not a valid string/);
+
+        expect(function() {
+            test.name = undefined;
+        }).to.throwError(/Not a valid string/);
+
+        expect(function() {
+            test.name = {};
+        }).to.throwError(/Not a valid string/);
+        */
+    });
+    /*
+    it("check schema type", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String}
+        }));
+
+        var test = new Test();
+        test.name = false;
+        expect(test.name).to.equal("false");
+    });
+
+    it("check schema string type", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: "string"}
+        }));
+
+        var test = new Test();
+        test.name = false;
+        expect(test.name).to.equal("false");
+    });
+    */
+});

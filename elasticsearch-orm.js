@@ -20,6 +20,10 @@ var SchemaType = function(options) {
 };
 
 SchemaType.findType = function(val) {
+    if (_.isArray(val)) {
+        return SchemaArray;
+    }
+
     for (var i = 0, l = SchemaType.types.length; i < l; i++) {
         var type = SchemaType.types[i];
         if (type.object === val || val.type === type.type ||
@@ -27,6 +31,8 @@ SchemaType.findType = function(val) {
                 return type;
         }
     }
+
+    return SchemaType;
 };
 
 SchemaType.prototype = {
@@ -188,6 +194,24 @@ var SchemaObjectId = function(options) {
 SchemaObjectId.object = SchemaObjectId;
 SchemaObjectId.type = "objectid";
 SchemaObjectId.prototype = new SchemaType();
+
+var SchemaArray = function(options) {
+    this.init({
+        type: new SchemaType.findType(options[0] || {})
+    });
+};
+
+SchemaArray.object = Array;
+SchemaArray.type = "array";
+SchemaArray.prototype = new SchemaType();
+
+_.extend(SchemaArray.prototype, {
+    coherce: function(val) {
+        if (typeof val === "object") {
+            return Array.prototype.slice.call(val, 0);
+        }
+    }
+});
 
 SchemaType.types = [
     SchemaString,
