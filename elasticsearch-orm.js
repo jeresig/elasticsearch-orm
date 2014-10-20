@@ -24,15 +24,18 @@ SchemaType.findType = function(val) {
         return SchemaArray;
     }
 
+    if (!("type" in val) && _.isObject(val) && !_.isFunction(val)) {
+        return SchemaObject;
+    }
+
     for (var i = 0, l = SchemaType.types.length; i < l; i++) {
         var type = SchemaType.types[i];
+
         if (type.object === val || val.type === type.type ||
             type.object === val.type) {
                 return type;
         }
     }
-
-    return SchemaType;
 };
 
 SchemaType.prototype = {
@@ -210,9 +213,17 @@ var genMockArray = function(type, array) {
 };
 
 var SchemaArray = function(options) {
-    this.init({
-        type: new (SchemaType.findType(options[0] || {}))
-    });
+    var type;
+
+    if (options[0]) {
+        type = SchemaType.findType(options[0]);
+    }
+
+    if (type) {
+        type = new type(options[0]);
+    }
+
+    this.init({type: type});
 };
 
 SchemaArray.object = Array;
@@ -220,9 +231,20 @@ SchemaArray.type = "array";
 SchemaArray.prototype = new SchemaType();
 
 _.extend(SchemaArray.prototype, {
+    default: function() {
+        if (!this.options.type) {
+            return [];
+        }
+
+        return genMockArray(this.options.type);
+    },
+
     coherce: function(val) {
         if (val && typeof val === "object" && "length" in val) {
-            val = Array.prototype.slice.call(val, 0);
+            if (!this.options.type) {
+                return val;
+            }
+
             var ret = genMockArray(this.options.type);
 
             for (var i = 0; i < val.length; i++) {
@@ -236,12 +258,81 @@ _.extend(SchemaArray.prototype, {
     }
 });
 
+var genMockObject = function(types, obj) {
+    obj = obj || {};
+
+    Object.defineProperty(obj, "__data", {
+        value: {}
+    });
+
+    Object.keys(types).forEach(function(name) {
+        var type = SchemaType.findType(types[name]);
+
+        if (!type) {
+            return;
+        }
+
+        type = new type(types[name]);
+
+        if ("default" in type) {
+            obj.__data[name] = type.default();
+        }
+
+        Object.defineProperty(obj, name, {
+            get: function() {
+                return obj.__data[name];
+            },
+
+            set: function(value) {
+                value = type.validate(value);
+                obj.__data[name] = value;
+            },
+
+            enumerable: true
+        });
+    });
+
+    return obj;
+};
+
+var SchemaObject = function(options) {
+    this.init(options);
+};
+
+SchemaObject.object = Object;
+SchemaObject.type = "object";
+SchemaObject.prototype = new SchemaType();
+
+_.extend(SchemaObject.prototype, {
+    default: function() {
+        return genMockObject(this.options);
+    },
+
+    coherce: function(val) {
+        if (val && _.isPlainObject(val)) {
+            var ret = genMockObject(this.options);
+
+            for (var key in val) {
+                if (val.hasOwnProperty(key)) {
+                    ret[key] = val[key];
+                }
+            }
+
+            return ret;
+        }
+
+        throw new Error("Not a valid object.");
+    }
+});
+
 SchemaType.types = [
     SchemaString,
     SchemaNumber,
     SchemaBoolean,
     SchemaDate,
-    SchemaObjectId
+    SchemaObjectId,
+    SchemaArray,
+    SchemaObject
 ];
 
 var Schema = function(props) {
@@ -796,8 +887,12 @@ module.exports = {
         }
 
         var Model = function(data) {
-            this.__origData = _.cloneDeep(data);
-            this.__data = {};
+            Object.defineProperty(this, "__origData", {
+                value: _.cloneDeep(data)
+            });
+            Object.defineProperty(this, "__data", {
+                value: {}
+            });
             this.schema = schema;
 
             for (var name in data) {
@@ -809,6 +904,10 @@ module.exports = {
                 var schemaProp = schema.props[name];
                 var type = new (SchemaType.findType(schemaProp))(schemaProp);
 
+                if ("default" in type) {
+                    this.__data[name] = type.default();
+                }
+
                 Object.defineProperty(Model.prototype, name, {
                     get: function() {
                         return this.__data[name];
@@ -817,7 +916,9 @@ module.exports = {
                     set: function(value) {
                         value = type.validate(value);
                         this.__data[name] = value;
-                    }.bind(this)
+                    }.bind(this),
+
+                    enumerable: true
                 });
             }.bind(this));
 
@@ -830,7 +931,9 @@ module.exports = {
 
                     set: function(value) {
                         schema.virtuals[name].setter.call(this, val);
-                    }.bind(this)
+                    }.bind(this),
+
+                    enumerable: true
                 });
             }.bind(this));
         };

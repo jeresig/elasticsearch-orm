@@ -263,7 +263,6 @@ describe("Date Schema Type", function() {
     });
 });
 
-
 describe("Array Schema Type", function() {
     it("check validation on property set", function() {
         var Test = es.model("Test", new es.Schema({
@@ -311,5 +310,128 @@ describe("Array Schema Type", function() {
         test.names = ["test"];
         test.names.unshift(false);
         expect(test.names[0]).to.equal("false");
+    });
+
+    it("should exist by default", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: [String]
+        }));
+
+        var test = new Test();
+        test.names.push(false);
+        expect(test.names[0]).to.equal("false");
+    });
+
+    it("allow for anything to be inside of it", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: []
+        }));
+
+        var test = new Test();
+        test.names.push(false);
+        test.names.push("hello");
+        expect(test.names[0]).to.equal(false);
+        expect(test.names[1]).to.equal("hello");
+    });
+
+    it("verify Array schema", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: Array
+        }));
+
+        var test = new Test();
+        test.names.push(false);
+        test.names.push("hello");
+        expect(test.names[0]).to.equal(false);
+        expect(test.names[1]).to.equal("hello");
+    });
+});
+
+// TODO: Test enumerable status of objects
+// Also enumerable of model properties
+
+describe("Object Schema Type", function() {
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                name: String,
+                age: Number
+            }
+        }));
+
+        var test = new Test();
+        test.names = {
+            name: false,
+            age: "30"
+        };
+        expect(test.names.name).to.equal("false");
+        expect(test.names.age).to.equal(30);
+
+        expect(function() {
+            test.names = {name: {}};
+        }).to.throwError(/Not a valid string/);
+
+        expect(function() {
+            test.names = null;
+        }).to.throwError(/Not a valid object/);
+
+        expect(function() {
+            test.names = undefined;
+        }).to.throwError(/Not a valid object/);
+
+        expect(function() {
+            test.names = "foo";
+        }).to.throwError(/Not a valid object/);
+    });
+
+    it("check validation on property set", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                name: String,
+                age: Number
+            }
+        }));
+
+        var test = new Test();
+        test.names = {};
+        test.names.name = false;
+        expect(test.names.name).to.equal("false");
+    });
+
+    it("should exist by default", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                name: String,
+                age: Number
+            }
+        }));
+
+        var test = new Test();
+        test.names.name = false;
+        expect(test.names.name).to.equal("false");
+    });
+
+    it("allow for anything to be inside of it", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {}
+        }));
+
+        var test = new Test();
+        test.names.name = false;
+        test.names.age = "hello";
+        expect(test.names.name).to.equal(false);
+        expect(test.names.age).to.equal("hello");
+    });
+
+    it("verify Object schema", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: Object
+        }));
+
+        var test = new Test();
+        test.names.name = false;
+        test.names.age = "hello";
+        expect(test.names.name).to.equal(false);
+        expect(test.names.age).to.equal("hello");
     });
 });
