@@ -274,39 +274,42 @@ describe("Array Schema Type", function() {
         test.names = [false];
         expect(test.names[0]).to.equal("false");
 
-        /*
         expect(function() {
-            test.name = null;
+            test.names = [{}];
         }).to.throwError(/Not a valid string/);
 
         expect(function() {
-            test.name = undefined;
-        }).to.throwError(/Not a valid string/);
+            test.names = null;
+        }).to.throwError(/Not a valid array/);
 
         expect(function() {
-            test.name = {};
-        }).to.throwError(/Not a valid string/);
-        */
+            test.names = undefined;
+        }).to.throwError(/Not a valid array/);
+
+        expect(function() {
+            test.names = "foo";
+        }).to.throwError(/Not a valid array/);
     });
-    /*
-    it("check schema type", function() {
+
+    it("check validation on push", function() {
         var Test = es.model("Test", new es.Schema({
-            name: {type: String}
+            names: [String]
         }));
 
         var test = new Test();
-        test.name = false;
-        expect(test.name).to.equal("false");
+        test.names = ["test"];
+        test.names.push(false);
+        expect(test.names[1]).to.equal("false");
     });
 
-    it("check schema string type", function() {
+    it("check validation on unshift", function() {
         var Test = es.model("Test", new es.Schema({
-            name: {type: "string"}
+            names: [String]
         }));
 
         var test = new Test();
-        test.name = false;
-        expect(test.name).to.equal("false");
+        test.names = ["test"];
+        test.names.unshift(false);
+        expect(test.names[0]).to.equal("false");
     });
-    */
 });

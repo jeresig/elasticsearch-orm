@@ -195,9 +195,23 @@ SchemaObjectId.object = SchemaObjectId;
 SchemaObjectId.type = "objectid";
 SchemaObjectId.prototype = new SchemaType();
 
+var genMockArray = function(type, array) {
+    array = array || [];
+
+    array.push = function(item) {
+        return Array.prototype.push.call(this, type.validate(item));
+    };
+
+    array.unshift = function(item) {
+        return Array.prototype.unshift.call(this, type.validate(item));
+    };
+
+    return array;
+};
+
 var SchemaArray = function(options) {
     this.init({
-        type: new SchemaType.findType(options[0] || {})
+        type: new (SchemaType.findType(options[0] || {}))
     });
 };
 
@@ -207,9 +221,18 @@ SchemaArray.prototype = new SchemaType();
 
 _.extend(SchemaArray.prototype, {
     coherce: function(val) {
-        if (typeof val === "object") {
-            return Array.prototype.slice.call(val, 0);
+        if (val && typeof val === "object" && "length" in val) {
+            val = Array.prototype.slice.call(val, 0);
+            var ret = genMockArray(this.options.type);
+
+            for (var i = 0; i < val.length; i++) {
+                ret.push(val[i]);
+            }
+
+            return ret;
         }
+
+        throw new Error("Not a valid array.");
     }
 });
 
