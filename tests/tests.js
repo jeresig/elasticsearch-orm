@@ -407,9 +407,6 @@ describe("Array Schema Type", function() {
     });
 });
 
-// TODO: Test enumerable status of objects
-// Also enumerable of model properties
-
 describe("Object Schema Type", function() {
     it("check validation on property set", function() {
         var Test = es.model("Test", new es.Schema({
@@ -534,3 +531,7 @@ describe("Object Schema Type", function() {
         expect(Object.keys(test.names)).to.eql(["name", "val"]);
     });
 });
+
+// TODO: Test recursive models (go into arrays/objects)
+// TODO: Support custom sub-schemas (define a custom schema then use it inline)
+// TODO: Find a way to validate on array property set
