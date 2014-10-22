@@ -99,6 +99,18 @@ describe("String Schema Type", function() {
         expect(test.name).to.equal("false");
     });
 
+    it("check default value", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {type: String, default: "test"}
+        }));
+
+        var test = new Test();
+        expect(test.name).to.equal("test");
+
+        test.name = 4;
+        expect(test.name).to.equal("4");
+    });
+
     it("check schema enum type", function() {
         var Test = es.model("Test", new es.Schema({
             name: {type: String, "enum": [
@@ -187,6 +199,18 @@ describe("Number Schema Type", function() {
         expect(test.val).to.equal(3);
     });
 
+    it("check default value", function() {
+        var Test = es.model("Test", new es.Schema({
+            val: {type: Number, default: 3}
+        }));
+
+        var test = new Test();
+        expect(test.val).to.equal(3);
+
+        test.val = "4";
+        expect(test.val).to.equal(4);
+    });
+
     it("check min", function() {
         var Test = es.model("Test", new es.Schema({
             val: {type: Number, min: 2}
@@ -260,6 +284,26 @@ describe("Date Schema Type", function() {
         var test = new Test();
         test.val = "2014/10/17";
         expect(test.val.getTime()).to.equal(testTime);
+    });
+
+    it("check default value", function() {
+        var nowTime = Date.now();
+
+        var Test = es.model("Test", new es.Schema({
+            val: {
+                type: Date,
+                default: function() {
+                    return nowTime;
+                }
+            }
+        }));
+
+        var test = new Test();
+        expect(test.val.getTime()).to.equal(nowTime);
+
+        var testTime = (new Date("2014/10/17")).toString();
+        test.val = "2014/10/17";
+        expect(test.val.toString()).to.equal(testTime);
     });
 });
 
@@ -344,6 +388,22 @@ describe("Array Schema Type", function() {
         test.names.push("hello");
         expect(test.names[0]).to.equal(false);
         expect(test.names[1]).to.equal("hello");
+    });
+
+    it("check default value", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                type: Array,
+                default: function() {
+                    return [false];
+                }
+            }
+        }));
+
+        var test = new Test();
+        test.names.push(true);
+        expect(test.names[0]).to.equal(false);
+        expect(test.names[1]).to.equal(true);
     });
 });
 
@@ -433,5 +493,25 @@ describe("Object Schema Type", function() {
         test.names.age = "hello";
         expect(test.names.name).to.equal(false);
         expect(test.names.age).to.equal("hello");
+    });
+
+    it("check default value", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                type: Object,
+                name: String,
+                val: Number,
+                default: function() {
+                    return {
+                        name: false,
+                        val: "3"
+                    };
+                }
+            }
+        }));
+
+        var test = new Test();
+        expect(test.names.name).to.equal("false");
+        expect(test.names.val).to.equal(3);
     });
 });

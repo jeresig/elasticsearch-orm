@@ -45,10 +45,12 @@ SchemaType.prototype = {
         this.setter = function() {};
     },
 
+    coherce: function(val) {
+        return val;
+    },
+
     validate: function(val) {
-        if (this.coherce) {
-            val = this.coherce(val);
-        }
+        val = this.coherce(val);
 
         for (var option in this.options) {
             if (this.options[option] && this[option]) {
@@ -61,7 +63,17 @@ SchemaType.prototype = {
     },
 
     default: function(val) {
-        return val == null ? this.options.default : val;
+        if (val == null && this.options.default != null) {
+            val = this.options.default;
+
+            if (typeof val === "function") {
+                val = val();
+            }
+
+            return this.coherce(val);
+        }
+
+        return val;
     },
 
     required: function(val) {
@@ -213,17 +225,21 @@ var genMockArray = function(type, array) {
 };
 
 var SchemaArray = function(options) {
-    var type;
+    if ("length" in options) {
+        if (options[0]) {
+            var type = SchemaType.findType(options[0]);
 
-    if (options[0]) {
-        type = SchemaType.findType(options[0]);
+            if (type) {
+                options = {subType: new type(options[0])};
+            } else {
+                options = {};
+            }
+        } else {
+            options = {};
+        }
     }
 
-    if (type) {
-        type = new type(options[0]);
-    }
-
-    this.init({type: type});
+    this.init(options);
 };
 
 SchemaArray.object = Array;
@@ -231,21 +247,23 @@ SchemaArray.type = "array";
 SchemaArray.prototype = new SchemaType();
 
 _.extend(SchemaArray.prototype, {
-    default: function() {
-        if (!this.options.type) {
-            return [];
+    default: function(val) {
+        val = SchemaType.prototype.default.call(this, val) || [];
+
+        if (!this.options.subType) {
+            return val;
         }
 
-        return genMockArray(this.options.type);
+        return genMockArray(this.options.subType, val);
     },
 
     coherce: function(val) {
         if (val && typeof val === "object" && "length" in val) {
-            if (!this.options.type) {
+            if (!this.options.subType) {
                 return val;
             }
 
-            var ret = genMockArray(this.options.type);
+            var ret = genMockArray(this.options.subType);
 
             for (var i = 0; i < val.length; i++) {
                 ret.push(val[i]);
@@ -259,6 +277,11 @@ _.extend(SchemaArray.prototype, {
 });
 
 var genMockObject = function(types, obj) {
+    // Don't re-bind if we're already working with a mocked object
+    if (obj && "__data" in obj) {
+        return obj;
+    }
+
     obj = obj || {};
 
     Object.defineProperty(obj, "__data", {
@@ -274,9 +297,7 @@ var genMockObject = function(types, obj) {
 
         type = new type(types[name]);
 
-        if ("default" in type) {
-            obj.__data[name] = type.default();
-        }
+        obj.__data[name] = type.default();
 
         Object.defineProperty(obj, name, {
             get: function() {
@@ -304,8 +325,10 @@ SchemaObject.type = "object";
 SchemaObject.prototype = new SchemaType();
 
 _.extend(SchemaObject.prototype, {
-    default: function() {
-        return genMockObject(this.options);
+    default: function(val) {
+        val = SchemaType.prototype.default.call(this, val);
+
+        return genMockObject(this.options, val);
     },
 
     coherce: function(val) {
