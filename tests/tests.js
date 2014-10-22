@@ -498,7 +498,6 @@ describe("Object Schema Type", function() {
     it("check default value", function() {
         var Test = es.model("Test", new es.Schema({
             names: {
-                type: Object,
                 name: String,
                 val: Number,
                 default: function() {
@@ -513,5 +512,25 @@ describe("Object Schema Type", function() {
         var test = new Test();
         expect(test.names.name).to.equal("false");
         expect(test.names.val).to.equal(3);
+    });
+
+    it("check enumerable", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: String,
+            names: {
+                name: String,
+                val: Number,
+                default: function() {
+                    return {
+                        name: false,
+                        val: "3"
+                    };
+                }
+            }
+        }));
+
+        var test = new Test();
+        expect(Object.keys(test)).to.eql(["name", "names"]);
+        expect(Object.keys(test.names)).to.eql(["name", "val"]);
     });
 });

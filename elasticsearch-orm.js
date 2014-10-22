@@ -588,7 +588,7 @@ var ModelPrototype = {
     },
 
     validate: function(callback) {
-        var wrongProp = this._validate(this.__data, this.schema.props, "");
+        var wrongProp = this._validate(this.__data, this.__schema.props, "");
         callback(wrongProp ? new Error("Mis-match type: " + wrongProp) : null);
         return this;
     },
@@ -916,11 +916,9 @@ module.exports = {
             Object.defineProperty(this, "__data", {
                 value: {}
             });
-            this.schema = schema;
-
-            for (var name in data) {
-                this[name] = data[name];
-            }
+            Object.defineProperty(this, "__schema", {
+                value: schema
+            });
 
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
@@ -931,7 +929,7 @@ module.exports = {
                     this.__data[name] = type.default();
                 }
 
-                Object.defineProperty(Model.prototype, name, {
+                Object.defineProperty(this, name, {
                     get: function() {
                         return this.__data[name];
                     }.bind(this),
@@ -947,7 +945,7 @@ module.exports = {
 
             // Then define the virtual properties
             Object.keys(schema.virtuals).forEach(function(name) {
-                Object.defineProperty(Model.prototype, name, {
+                Object.defineProperty(this, name, {
                     get: function() {
                         return schema.virtuals[name].getter.call(this);
                     }.bind(this),
@@ -959,6 +957,11 @@ module.exports = {
                     enumerable: true
                 });
             }.bind(this));
+
+            // Bring in the user-specified data
+            for (var name in data) {
+                this[name] = data[name];
+            }
         };
 
         Model.prototype = {
