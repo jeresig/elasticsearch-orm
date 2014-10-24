@@ -530,8 +530,31 @@ describe("Object Schema Type", function() {
         expect(Object.keys(test)).to.eql(["name", "names"]);
         expect(Object.keys(test.names)).to.eql(["name", "val"]);
     });
+
+    it("should support deep implementations", function() {
+        var Test = es.model("Test", new es.Schema({
+            names: {
+                name: String,
+                age: Number,
+                data: {
+                    val: Number,
+                    items: [{
+                        val: Number
+                    }]
+                }
+            }
+        }));
+
+        var test = new Test();
+        test.names.name = false;
+        expect(test.names.name).to.equal("false");
+        test.names.data.val = "3";
+        expect(test.names.data.val).to.equal(3);
+        test.names.data.items.push({val: "3"});
+        expect(test.names.data.items[0].val).to.equal(3);
+    });
 });
 
-// TODO: Test recursive models (go into arrays/objects)
 // TODO: Support custom sub-schemas (define a custom schema then use it inline)
 // TODO: Find a way to validate on array property set
+// TODO: Re-write .validate() (mostly to just test array values)
