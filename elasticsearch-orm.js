@@ -15,8 +15,8 @@ var models = {};
 // Store the client connection as well so that it's "shared"
 var client;
 
-var SchemaType = function(options) {
-    this.init(options);
+var SchemaType = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaType.findType = function(val) {
@@ -39,8 +39,9 @@ SchemaType.findType = function(val) {
 };
 
 SchemaType.prototype = {
-    init: function(options) {
+    init: function(options, prefix) {
         this.options = options || {};
+        this.prefix = prefix;
         this.getter = function() {};
         this.setter = function() {};
     },
@@ -49,14 +50,19 @@ SchemaType.prototype = {
         return val;
     },
 
-    validate: function(val) {
+    validate: function(val, prefix) {
         val = this.coherce(val);
+        prefix = prefix || this.prefix || "";
 
-        for (var option in this.options) {
-            if (this.options[option] && this[option]) {
-                // TODO: Maybe better handle exceptions?
-                val = this[option](val);
+        try {
+            for (var option in this.options) {
+                if (this.options[option] && this[option]) {
+                    // TODO: Maybe better handle exceptions?
+                    val = this[option](val);
+                }
             }
+        } catch(e) {
+            throw new Error("Error (" + prefix + "): " + e.message);
         }
 
         return val;
@@ -210,15 +216,17 @@ SchemaObjectId.object = SchemaObjectId;
 SchemaObjectId.type = "objectid";
 SchemaObjectId.prototype = new SchemaType();
 
-var genMockArray = function(type, array) {
+var genMockArray = function(type, prefix, array) {
     array = array || [];
 
     array.push = function(item) {
-        return Array.prototype.push.call(this, type.validate(item));
+        return Array.prototype.push.call(this,
+            type.validate(item, prefix));
     };
 
     array.unshift = function(item) {
-        return Array.prototype.unshift.call(this, type.validate(item));
+        return Array.prototype.unshift.call(this,
+            type.validate(item, prefix));
     };
 
     return array;
@@ -254,7 +262,7 @@ _.extend(SchemaArray.prototype, {
             return val;
         }
 
-        return genMockArray(this.options.subType, val);
+        return genMockArray(this.options.subType, this.options.prefix, val);
     },
 
     coherce: function(val) {
@@ -263,7 +271,8 @@ _.extend(SchemaArray.prototype, {
                 return val;
             }
 
-            var ret = genMockArray(this.options.subType);
+            var ret = genMockArray(this.options.subType,
+                this.options.prefix);
 
             for (var i = 0; i < val.length; i++) {
                 ret.push(val[i]);
@@ -276,7 +285,7 @@ _.extend(SchemaArray.prototype, {
     }
 });
 
-var genMockObject = function(types, obj) {
+var genMockObject = function(types, prefix, obj) {
     // Don't re-bind if we're already working with a mocked object
     if (obj && "__data" in obj) {
         return obj;
@@ -305,7 +314,7 @@ var genMockObject = function(types, obj) {
             },
 
             set: function(value) {
-                value = type.validate(value);
+                value = type.validate(value, prefix);
                 obj.__data[name] = value;
             },
 
@@ -328,12 +337,12 @@ _.extend(SchemaObject.prototype, {
     default: function(val) {
         val = SchemaType.prototype.default.call(this, val);
 
-        return genMockObject(this.options, val);
+        return genMockObject(this.options, this.options.prefix, val);
     },
 
     coherce: function(val) {
         if (val && _.isPlainObject(val)) {
-            var ret = genMockObject(this.options);
+            var ret = genMockObject(this.options, this.options.prefix);
 
             for (var key in val) {
                 if (val.hasOwnProperty(key)) {
@@ -923,7 +932,8 @@ module.exports = {
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
                 var schemaProp = schema.props[name];
-                var type = new (SchemaType.findType(schemaProp))(schemaProp);
+                var type = new (SchemaType.findType(schemaProp))(schemaProp,
+                    name);
 
                 if ("default" in type) {
                     this.__data[name] = type.default();
