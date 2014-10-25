@@ -51,10 +51,11 @@ SchemaType.prototype = {
     },
 
     validate: function(val, prefix) {
-        val = this.coherce(val);
         prefix = prefix || this.prefix || "";
 
         try {
+            val = this.coherce(val);
+
             for (var option in this.options) {
                 if (this.options[option] && this[option]) {
                     // TODO: Maybe better handle exceptions?
@@ -62,7 +63,16 @@ SchemaType.prototype = {
                 }
             }
         } catch(e) {
-            throw new Error("Error (" + prefix + "): " + e.message);
+            var path = prefix;
+            var message = e.message;
+
+            if (/Error \((.*?)\): (.*)$/.test(message)) {
+                message = RegExp.$2;
+                path = prefix + "." + RegExp.$1;
+                path = path.replace(/\.(\d+)/g, "[$1]");
+            }
+
+            throw new Error("Error (" + path + "): " + message);
         }
 
         return val;
@@ -91,8 +101,8 @@ SchemaType.prototype = {
     }
 };
 
-var SchemaString = function(options) {
-    this.init(options);
+var SchemaString = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaString.object = String;
@@ -137,8 +147,8 @@ _.extend(SchemaString.prototype, {
     }
 });
 
-var SchemaNumber = function(options) {
-    this.init(options);
+var SchemaNumber = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaNumber.object = Number;
@@ -175,8 +185,8 @@ _.extend(SchemaNumber.prototype, {
     }
 });
 
-var SchemaBoolean = function(options) {
-    this.init(options);
+var SchemaBoolean = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaBoolean.object = Boolean;
@@ -189,8 +199,8 @@ _.extend(SchemaBoolean.prototype, {
     }
 });
 
-var SchemaDate = function(options) {
-    this.init(options);
+var SchemaDate = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaDate.object = Date;
@@ -208,31 +218,31 @@ _.extend(SchemaDate.prototype, {
     }
 });
 
-var SchemaObjectId = function(options) {
-    this.init(options);
+var SchemaObjectId = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaObjectId.object = SchemaObjectId;
 SchemaObjectId.type = "objectid";
 SchemaObjectId.prototype = new SchemaType();
 
-var genMockArray = function(type, prefix, array) {
+var genMockArray = function(type, array) {
     array = array || [];
 
     array.push = function(item) {
         return Array.prototype.push.call(this,
-            type.validate(item, prefix));
+            type.validate(item, this.length.toString()));
     };
 
     array.unshift = function(item) {
         return Array.prototype.unshift.call(this,
-            type.validate(item, prefix));
+            type.validate(item, "0"));
     };
 
     return array;
 };
 
-var SchemaArray = function(options) {
+var SchemaArray = function(options, prefix) {
     if ("length" in options) {
         if (options[0]) {
             var type = SchemaType.findType(options[0]);
@@ -247,7 +257,7 @@ var SchemaArray = function(options) {
         }
     }
 
-    this.init(options);
+    this.init(options, prefix);
 };
 
 SchemaArray.object = Array;
@@ -262,7 +272,7 @@ _.extend(SchemaArray.prototype, {
             return val;
         }
 
-        return genMockArray(this.options.subType, this.options.prefix, val);
+        return genMockArray(this.options.subType, val);
     },
 
     coherce: function(val) {
@@ -271,8 +281,7 @@ _.extend(SchemaArray.prototype, {
                 return val;
             }
 
-            var ret = genMockArray(this.options.subType,
-                this.options.prefix);
+            var ret = genMockArray(this.options.subType);
 
             for (var i = 0; i < val.length; i++) {
                 ret.push(val[i]);
@@ -285,7 +294,7 @@ _.extend(SchemaArray.prototype, {
     }
 });
 
-var genMockObject = function(types, prefix, obj) {
+var genMockObject = function(types, obj) {
     // Don't re-bind if we're already working with a mocked object
     if (obj && "__data" in obj) {
         return obj;
@@ -314,7 +323,7 @@ var genMockObject = function(types, prefix, obj) {
             },
 
             set: function(value) {
-                value = type.validate(value, prefix);
+                value = type.validate(value, name);
                 obj.__data[name] = value;
             },
 
@@ -325,8 +334,8 @@ var genMockObject = function(types, prefix, obj) {
     return obj;
 };
 
-var SchemaObject = function(options) {
-    this.init(options);
+var SchemaObject = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaObject.object = Object;
@@ -337,12 +346,12 @@ _.extend(SchemaObject.prototype, {
     default: function(val) {
         val = SchemaType.prototype.default.call(this, val);
 
-        return genMockObject(this.options, this.options.prefix, val);
+        return genMockObject(this.options, val);
     },
 
     coherce: function(val) {
         if (val && _.isPlainObject(val)) {
-            var ret = genMockObject(this.options, this.options.prefix);
+            var ret = genMockObject(this.options);
 
             for (var key in val) {
                 if (val.hasOwnProperty(key)) {

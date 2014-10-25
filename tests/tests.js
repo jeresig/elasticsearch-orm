@@ -68,15 +68,15 @@ describe("String Schema Type", function() {
 
         expect(function() {
             test.name = null;
-        }).to.throwError(/Not a valid string/);
+        }).to.throwError(/Error \(name\): Not a valid string\./);
 
         expect(function() {
             test.name = undefined;
-        }).to.throwError(/Not a valid string/);
+        }).to.throwError(/Error \(name\): Not a valid string\./);
 
         expect(function() {
             test.name = {};
-        }).to.throwError(/Not a valid string/);
+        }).to.throwError(/Error \(name\): Not a valid string\./);
     });
 
     it("check schema type", function() {
@@ -124,7 +124,7 @@ describe("String Schema Type", function() {
 
         expect(function() {
             test.name = "test";
-        }).to.throwError(/Expected enum value not found/);
+        }).to.throwError(/Error \(name\): Expected enum value not found\./);
     });
 
     it("lowercase", function() {
@@ -176,7 +176,7 @@ describe("Number Schema Type", function() {
 
         expect(function() {
             test.val = "lemon";
-        }).to.throwError(/Not a number/);
+        }).to.throwError(/Error \(val\): Not a number\./);
     });
 
     it("check schema type", function() {
@@ -223,7 +223,7 @@ describe("Number Schema Type", function() {
 
         expect(function() {
             test.val = 1;
-        }).to.throwError(/Expected value to be greater than 2/);
+        }).to.throwError(/Error \(val\): Expected value to be greater than 2\./);
     });
 
     it("check max", function() {
@@ -238,7 +238,7 @@ describe("Number Schema Type", function() {
 
         expect(function() {
             test.val = 4;
-        }).to.throwError(/Expected value to be less than 3/);
+        }).to.throwError(/Error \(val\): Expected value to be less than 3\./);
     });
 });
 
@@ -259,7 +259,7 @@ describe("Date Schema Type", function() {
 
         expect(function() {
             test.val = "foo";
-        }).to.throwError(/Invalid time value/);
+        }).to.throwError(/Error \(val\): Invalid time value/);
     });
 
     it("check schema type", function() {
@@ -319,19 +319,19 @@ describe("Array Schema Type", function() {
 
         expect(function() {
             test.names = [{}];
-        }).to.throwError(/Not a valid string/);
+        }).to.throwError(/Error \(names\[0\]\): Not a valid string\./);
 
         expect(function() {
             test.names = null;
-        }).to.throwError(/Not a valid array/);
+        }).to.throwError(/Error \(names\): Not a valid array\./);
 
         expect(function() {
             test.names = undefined;
-        }).to.throwError(/Not a valid array/);
+        }).to.throwError(/Error \(names\): Not a valid array\./);
 
         expect(function() {
             test.names = "foo";
-        }).to.throwError(/Not a valid array/);
+        }).to.throwError(/Error \(names\): Not a valid array\./);
     });
 
     it("check validation on push", function() {
@@ -426,19 +426,19 @@ describe("Object Schema Type", function() {
 
         expect(function() {
             test.names = {name: {}};
-        }).to.throwError(/Not a valid string/);
+        }).to.throwError(/Error \(names\.name\): Not a valid string\./);
 
         expect(function() {
             test.names = null;
-        }).to.throwError(/Not a valid object/);
+        }).to.throwError(/Error \(names\): Not a valid object\./);
 
         expect(function() {
             test.names = undefined;
-        }).to.throwError(/Not a valid object/);
+        }).to.throwError(/Error \(names\): Not a valid object\./);
 
         expect(function() {
             test.names = "foo";
-        }).to.throwError(/Not a valid object/);
+        }).to.throwError(/Error \(names\): Not a valid object\./);
     });
 
     it("check validation on property set", function() {
@@ -552,6 +552,12 @@ describe("Object Schema Type", function() {
         expect(test.names.data.val).to.equal(3);
         test.names.data.items.push({val: "3"});
         expect(test.names.data.items[0].val).to.equal(3);
+
+        /* TODO: Better support deep exception naming.
+        expect(function() {
+            test.names.data.items[0].val = {};
+        }).to.throwError(/Error \(val\): Not a number\./);
+        */
     });
 });
 
