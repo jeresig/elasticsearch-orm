@@ -553,61 +553,30 @@ var ModelPrototype = {
         return this;
     },
 
-    _validate: function(data, schema, path) {
-        var wrongProp;
-
+    _validate: function(data, schema) {
         for (var prop in schema) {
             var dataProp = data[prop];
             var schemaProp = schema[prop];
             var type = SchemaType.findType(schemaProp);
-            var propPath = path + "." + prop;
 
-            if (!type) {
-                if (_.isArray(schemaProp)) {
-                    if (!_.isArray(dataProp)) {
-                        wrongProp = propPath;
-                        break;
-                    }
+            type.validate(dataProp)
 
-                    for (var i = 0, l = dataProp.length; i < l; i++) {
-                        var itemPath = propPath + "[" + i + "]";
-                        var ret = this._validate(dataProp[i], schemaProp[0],
-                            itemPath);
-                        if (ret) {
-                            wrongProp = itemPath;
-                            break
-                        }
-                    }
-
-                // It's an object
-                } else if (_.isPlainObject(schemaProp)) {
-                    if (!_.isPlainObject(dataProp)) {
-                        wrongProp = propPath;
-                        break;
-                    }
-
-                    this._validate(dataProp, schemaProp, itemPath);
-
-                } else {
-                    throw new Error("Unknown schema for: " + prop);
+            // Validate the items in the array
+            if (_.isArray(schemaProp)) {
+                for (var i = 0, l = dataProp.length; i < l; i++) {
+                    this._validate(dataProp[i], schemaProp[0]);
                 }
-            }
 
-            if (!type.validate(dataProp)) {
-                wrongProp = propPath;
-            }
-
-            if (wrongProp) {
-                break;
+            // It's an object
+            } else if (_.isPlainObject(schemaProp)) {
+                this._validate(dataProp, schemaProp);
             }
         }
-
-        return wrongProp;
     },
 
     validate: function(callback) {
-        var wrongProp = this._validate(this.__data, this.__schema.props, "");
-        callback(wrongProp ? new Error("Mis-match type: " + wrongProp) : null);
+        this._validate(this.__data, this.__schema.props, "");
+        callback();
         return this;
     },
 
