@@ -413,10 +413,12 @@ Virtual.prototype = {
 
     "get": function(callback) {
         this.getter = callback;
+        return this;
     },
 
     "set": function(callback) {
         this.setter = callback;
+        return this;
     }
 };
 
@@ -953,7 +955,7 @@ module.exports = {
                     }.bind(this),
 
                     set: function(value) {
-                        schema.virtuals[name].setter.call(this, val);
+                        schema.virtuals[name].setter.call(this, value);
                     }.bind(this),
 
                     enumerable: true

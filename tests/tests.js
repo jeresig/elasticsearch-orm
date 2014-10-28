@@ -54,6 +54,24 @@ describe("Model", function() {
         test.name = "John";
         expect(test.name).to.equal("John");
     });
+
+    it("supports virtual properties", function() {
+        schema.virtual("age")
+            .get(function() {
+                return 30;
+            })
+            .set(function(age) {
+                this.name = this.name + " " + age;
+            });
+        var Test = es.model("Test", schema);
+        var test = new Test();
+        test.name = "John";
+        expect(test.name).to.equal("John");
+        expect(test.age).to.equal(30);
+
+        test.age = 40;
+        expect(test.name).to.equal("John 40");
+    });
 });
 
 describe("String Schema Type", function() {
