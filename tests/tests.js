@@ -156,6 +156,39 @@ describe("String Schema Type", function() {
         test.name = "       Cat   \n\t ";
         expect(test.name).to.equal("Cat");
     });
+
+    it("getters", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {
+                type: String,
+                get: function() {
+                    return "nope";
+                }
+            }
+        }));
+
+        var test = new Test();
+        expect(test.name).to.equal("nope");
+
+        test.name = 4;
+        expect(test.name).to.equal("nope");
+    });
+
+    it("setters", function() {
+        var Test = es.model("Test", new es.Schema({
+            name: {
+                type: String,
+                set: function(val) {
+                    this.name = val + "blah";
+                }
+            }
+        }));
+
+        var test = new Test();
+
+        test.name = 4;
+        expect(test.name).to.equal("4blah");
+    });
 });
 
 describe("Number Schema Type", function() {

@@ -42,8 +42,6 @@ SchemaType.prototype = {
     init: function(options, prefix) {
         this.options = options || {};
         this.prefix = prefix;
-        this.getter = function() {};
-        this.setter = function() {};
     },
 
     coherce: function(val) {
@@ -319,10 +317,18 @@ var genMockObject = function(types, obj) {
 
         Object.defineProperty(obj, name, {
             get: function() {
+                if (type.options.get) {
+                    return type.options.get.call(this.__data);
+                }
+
                 return obj.__data[name];
             },
 
             set: function(value) {
+                if (type.options.set) {
+                    return type.options.set.call(this.__data, value);
+                }
+
                 value = type.validate(value, name);
                 obj.__data[name] = value;
             },
@@ -919,10 +925,18 @@ module.exports = {
 
                 Object.defineProperty(this, name, {
                     get: function() {
+                        if (type.options.get) {
+                            return type.options.get.call(this.__data);
+                        }
+
                         return this.__data[name];
                     }.bind(this),
 
                     set: function(value) {
+                        if (type.options.set) {
+                            return type.options.set.call(this.__data, value);
+                        }
+
                         value = type.validate(value);
                         this.__data[name] = value;
                     }.bind(this),
