@@ -15,11 +15,23 @@ var models = {};
 // Store the client connection as well so that it's "shared"
 var client;
 
+var findModelBySchema = function(schema) {
+    for (var prop in models) {
+        if (models[prop].__schema === schema) {
+            return models[prop];
+        }
+    }
+};
+
 var SchemaType = function(options, prefix) {
     this.init(options, prefix);
 };
 
 SchemaType.findType = function(val) {
+    if (val instanceof Schema || val.type instanceof Schema) {
+        return SchemaCustom;
+    }
+
     if (_.isArray(val)) {
         return SchemaArray;
     }
@@ -216,6 +228,42 @@ _.extend(SchemaDate.prototype, {
     }
 });
 
+var SchemaCustom = function(options, prefix) {
+    this.init(options, prefix);
+};
+
+SchemaCustom.prototype = new SchemaType();
+
+_.extend(SchemaCustom.prototype, {
+    default: function(val) {
+        val = SchemaType.prototype.default.call(this, val) || {};
+
+        var schema = this.options.type || this.options;
+        var model = findModelBySchema(schema);
+
+        if (!model) {
+            throw new Error("No model matching the schema was found.");
+        }
+
+        return new model(val);
+    },
+
+    coherce: function(val) {
+        if (typeof val !== "object" && !_.isPlainObject(val)) {
+            throw new Error("Not an object. Unable to turn into a model.");
+        }
+
+        var schema = this.options.type || this.options;
+        var model = findModelBySchema(schema);
+
+        if (!model) {
+            throw new Error("No model matching the schema was found.");
+        }
+
+        return new model(val);
+    }
+});
+
 var SchemaObjectId = function(options, prefix) {
     this.init(options, prefix);
 };
@@ -390,6 +438,7 @@ var Schema = function(props) {
 };
 
 Schema.prototype = {
+    
     plugin: function(obj, options) {
 
     },
@@ -967,6 +1016,10 @@ module.exports = {
                 this[name] = data[name];
             }
         };
+
+        Object.defineProperty(Model, "__schema", {
+            value: schema
+        });
 
         Model.prototype = {
             _type: modelName,

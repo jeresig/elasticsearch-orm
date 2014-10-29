@@ -612,6 +612,47 @@ describe("Object Schema Type", function() {
     });
 });
 
-// TODO: Support custom sub-schemas (define a custom schema then use it inline)
+describe("Custom Schema Type", function() {
+    it("check validation on property set", function() {
+        var Other = new es.Schema({
+            name: String
+        });
+        es.model("Other", Other);
+
+        var Test = es.model("Test", new es.Schema({
+            val: Other
+        }));
+
+        var test = new Test();
+
+        test.val.name = false;
+        expect(test.val.name).to.equal("false");
+
+        test.val = {name: true};
+        expect(test.val.name).to.equal("true");
+
+        expect(function() {
+            test.val = "foo";
+        }).to.throwError(/Error \(val\): Not an object. Unable to turn into a model\./);
+    });
+
+    it("check default value", function() {
+        var Other = new es.Schema({
+            name: String
+        });
+        es.model("Other", Other);
+
+        var Test = es.model("Test", new es.Schema({
+            val: {
+                type: Other,
+                default: { name: true }
+            }
+        }));
+
+        var test = new Test();
+        expect(test.val.name).to.equal("true");
+    });
+});
+
 // TODO: Find a way to validate on array property set
 // TODO: Re-write .validate() (mostly to just test array values)
