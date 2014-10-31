@@ -655,4 +655,3 @@ describe("Custom Schema Type", function() {
 });
 
 // TODO: Find a way to validate on array property set
-// TODO: Re-write .validate() (mostly to just test array values)
