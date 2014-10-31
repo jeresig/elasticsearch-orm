@@ -15,11 +15,7 @@ var findModelBySchema = function(schema) {
     }
 };
 
-var SchemaType = function(options, prefix) {
-    this.init(options, prefix);
-};
-
-SchemaType.findType = function(val) {
+var findType = function(val) {
     if (val instanceof Schema || val.type instanceof Schema) {
         return SchemaCustom;
     }
@@ -32,14 +28,18 @@ SchemaType.findType = function(val) {
         return SchemaObject;
     }
 
-    for (var i = 0, l = SchemaType.types.length; i < l; i++) {
-        var type = SchemaType.types[i];
+    for (var name in Schema.Types) {
+        var type = Schema.Types[name];
 
         if (type.object === val || val.type === type.type ||
             type.object === val.type) {
                 return type;
         }
     }
+};
+
+var SchemaType = function(options, prefix) {
+    this.init(options, prefix);
 };
 
 SchemaType.prototype = {
@@ -49,6 +49,11 @@ SchemaType.prototype = {
     },
 
     coherce: function(val) {
+        // Functions won't serialize so we ignore them
+        if (typeof val === "function" || val == null) {
+            return null;
+        }
+
         return val;
     },
 
@@ -283,7 +288,7 @@ var genMockArray = function(type, array) {
 var SchemaArray = function(options, prefix) {
     if ("length" in options) {
         if (options[0]) {
-            var type = SchemaType.findType(options[0]);
+            var type = findType(options[0]);
 
             if (type) {
                 options = {subType: new type(options[0])};
@@ -345,9 +350,9 @@ var genMockObject = function(types, obj) {
     });
 
     Object.keys(types).forEach(function(name) {
-        var type = SchemaType.findType(types[name]);
+        var type = findType(types[name]);
 
-        if (!type) {
+        if (!type || name === "default") {
             return;
         }
 
@@ -412,16 +417,6 @@ _.extend(SchemaObject.prototype, {
     }
 });
 
-SchemaType.types = [
-    SchemaString,
-    SchemaNumber,
-    SchemaBoolean,
-    SchemaDate,
-    SchemaObjectId,
-    SchemaArray,
-    SchemaObject
-];
-
 var Schema = function(props) {
     this.props = props;
     this.methods = {};
@@ -430,7 +425,6 @@ var Schema = function(props) {
 };
 
 Schema.prototype = {
-    
     plugin: function(obj, options) {
 
     },
@@ -443,6 +437,17 @@ Schema.prototype = {
     add: function(props) {
         _.extend(this.props, props);
     }
+};
+
+Schema.Types = {
+    String: SchemaString,
+    Number: SchemaNumber,
+    Boolean: SchemaBoolean,
+    Array: SchemaArray,
+    Object: SchemaObject,
+    Date: SchemaDate,
+    ObjectId: SchemaObjectId,
+    Mixed: SchemaType
 };
 
 var Virtual = function() {};
@@ -489,8 +494,7 @@ return {
             // Define properties
             Object.keys(schema.props).forEach(function(name) {
                 var schemaProp = schema.props[name];
-                var type = new (SchemaType.findType(schemaProp))(schemaProp,
-                    name);
+                var type = new (findType(schemaProp))(schemaProp, name);
 
                 if ("default" in type) {
                     this.__data[name] = type.default();
